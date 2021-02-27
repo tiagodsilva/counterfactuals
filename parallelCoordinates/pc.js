@@ -23,25 +23,17 @@ function setGroups(divID) {
   return svg;
 }
 
-function drawCluster(svg, cluster, data, columns, yScale,
-          clusterSizes, thickScale) {
+function randomNoise(l, r) {
+  let xl = l || -1
+  var xr = r || 1
+  return Math.random() * (xr - xl) + xl
+}
+
+function getClusterData(data, columns, cluster, yScale) {
+  let fields = {}
   let df = filterCluster(data, cluster);
   let ncol = columns.length - 1;
-  let fields = [];
-  let counterfactuals = d3.map(df, d => d[""]);
-
-  svg.append("g")
-    .attr("class", "clusterName")
-    .append("text")
-    .attr("x", (margin.left + width - margin.right)/2)
-    .attr("y", margin.top)
-    .attr("text-anchor", "middle")
-    .attr("font-size", 10.5)
-    .text("Cluster " + cluster);
-
-  let axisGroup = svg.append("g")
-          .attr("id", "cluster" + cluster + "Axis");
-
+  let axisGroup = d3.select("#cluster" + cluster + "Axis");
   for(let field of columns.slice(1, columns.length - 1)) {
     dfField = parseNumbers(d3.map(df, d => d[field]));
     fields[field] = {}
@@ -81,6 +73,58 @@ function drawCluster(svg, cluster, data, columns, yScale,
         .call(g => g.attr("font-size", 8));
   }
 
+  return fields;
+}
+
+function getNoise(lines, id) {
+  let line = lines.getElementsByClassName(id)[0];
+  let lineX = d3.select(line).attr("x2");
+
+  // we will get the near lines
+  let toArray = d => Array.prototype.slice.call(d);
+  let arrayOfLines = toArray(lines.getElementsByTagName("line"));
+  let nearLines = [];
+  for(let l of arrayOfLines) {
+    let x = d3.select(l).attr("x2");
+    if(Math.abs(x - lineX) < 8 && Math.abs(x - lineX) != 0) {
+      nearLines.push(l);
+    }
+  }
+
+  let xs = d3.map(nearLines, d => d3.select(d).attr("x2"));
+
+  let noise = 0;
+  if(nearLines.length != 0) {
+    let noiseScale = d3.scaleLinear()
+            .domain([d3.min(xs), d3.max(xs)])
+            .range([-1, 1]);
+    noise = noiseScale(lineX);
+  }
+
+  return noise;
+}
+
+function drawCluster(svg, cluster, data, columns, yScale,
+          clusterSizes, thickScale) {
+  svg.append("g")
+    .attr("class", "clusterName")
+    .append("text")
+    .attr("x", (margin.left + width - margin.right)/2)
+    .attr("y", margin.top)
+    .attr("text-anchor", "middle")
+    .attr("font-size", 10.5)
+    .text("Cluster " + cluster);
+
+  let axisGroup = svg.append("g")
+          .attr("id", "cluster" + cluster + "Axis");
+
+  let fields = getClusterData(data, columns, cluster, yScale);
+  var hShift = 5;
+
+  let df = filterCluster(data, cluster);
+  let ncol = columns.length - 1;
+  let counterfactuals = d3.map(df, d => d[""]);
+
   // we draw the lines
   let svgLines = svg.append("g")
           .attr("id", "cluster" + cluster + "Lines")
@@ -91,11 +135,12 @@ function drawCluster(svg, cluster, data, columns, yScale,
           .attr("transform", "translate(" + hShift + "," + margin.top + ")");
 
   for(let i = 1; i < ncol - 1; i ++) {
+    // we will draw the lines here
     var previousField = columns[i];
     var nextField = columns[i + 1];
 
     var lineGroup = svgLines.append("g")
-        .attr("id", previousField + nextField + "Lines");
+        .attr("class", previousField + nextField + "Lines");
 
     lineGroup.selectAll("line")
       .data(counterfactuals)
@@ -103,37 +148,41 @@ function drawCluster(svg, cluster, data, columns, yScale,
         .attr("class", d => "cluster" + cluster + d)
         .attr("cluster", cluster)
         .attr("x1", (d, j) => {
-          return fields[previousField]["scale"](fields[previousField]["df"][j]);
+          if(i == 1) {
+            // for the initial field
+            return fields[previousField]["scale"](fields[previousField]["df"][j]);
+          } else {
+            // for the other fields, we can get the actual x position
+            let previousPreviousField = columns[i - 1];
+            let thisCluster = document.getElementById("cluster" + cluster + "Lines");
+            let lines = thisCluster.getElementsByClassName(previousPreviousField +
+                      previousField + "Lines")[0];
+            let previousLine = lines.getElementsByClassName("cluster" + cluster + d)[0];
+            let previousX = d3.select(previousLine).attr("x2");
+            return previousX;
+          }
         })
         .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
         .attr("x2", (d, j) => {
-          return fields[nextField]["scale"](fields[nextField]["df"][j]);
+          if(i == 1) {
+
+            return fields[nextField]["scale"](fields[nextField]["df"][j]) + Noise();
+          } else {
+            let previousPreviousField = columns[i - 1]
+            let thisCluster = document.getElementById("cluster" + cluster + "Lines");
+            let lines = thisCluster.getElementsByClassName(previousPreviousField +
+                    previousField + "Lines")[0];
+            // this function will check for the previous lines
+            // and choose the random noise based on it
+            let noise = getNoise(lines,
+                    "cluster" + cluster + d);
+            let x = fields[nextField]["scale"](fields[nextField]["df"][j]);
+            return x + noise;
+          }
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
-        .attr("stroke-width", thickScale(clusterSizes[cluster]))
-        .attr("stroke", "blue");
-
-
-    let lineMouseGroup = svgMouseOver.append("g")
-            .attr("id", "lineMouseGroup" + previousField + nextField);
-
-    // insert transparent lines for highlight on mouse over
-
-    lineMouseGroup.selectAll("line")
-      .data(counterfactuals)
-        .join("line")
-        .attr("class", d => "mouseOverArea" + cluster + d)
-        .attr("cluster", cluster)
-        .attr("x1", (d, j) => {
-          return fields[previousField]["scale"](fields[previousField]["df"][j]);
-        })
-        .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
-        .attr("x2", (d, j) => {
-          return fields[nextField]["scale"](fields[nextField]["df"][j]);
-        })
-        .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
-        .attr("stroke-width", 6.9)
-        .attr("stroke", "transparent")
+        .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
+        .attr("stroke", "blue")
         .on("mouseover", function(event, d) {
           // console.log(d)
           var elementClass = "cluster" + cluster + d;
@@ -143,7 +192,7 @@ function drawCluster(svg, cluster, data, columns, yScale,
 
           d3.selectAll("." + elementClass)
             .attr("stroke", "red")
-            .attr("stroke-width", 3)
+            .attr("stroke-width", 1)
             .attr("opacity", 1);
         })
         .on("mouseout", function(event, d) {
@@ -151,9 +200,14 @@ function drawCluster(svg, cluster, data, columns, yScale,
             d3.select("#cluster" + this.attributes.cluster.value + "Lines")
               .selectAll("line")
               .attr("stroke", "blue")
-              .attr("stroke-width", thickScale(clusterSizes[cluster]))
+              .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
               .attr("opacity", 1);
         });
+
+
+    let lineMouseGroup = svgMouseOver.append("g")
+            .attr("id", "lineMouseGroup" + previousField + nextField);
+
   }
 
 }
