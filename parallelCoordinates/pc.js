@@ -14,7 +14,7 @@ function setGroups(divID, df) {
   let clusters = parseNumbers(d3.map(df, d => d.Clusters));
   clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
   let lenClusters = clusters.length;
-  console.log(clusters);
+  // console.log(clusters);
   let mainSVG = d3.select("#visContainer")
           .append("svg")
           .attr("height", height)
@@ -190,7 +190,7 @@ function drawCluster(svg, cluster, data, columns, yScale,
                     "cluster" + cluster + d);
             let x = fields[nextField]["scale"](fields[nextField]["df"][j]);
 
-            return x + noise;
+            return x + randomNoise();
           }
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
