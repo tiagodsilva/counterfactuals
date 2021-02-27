@@ -190,7 +190,7 @@ function drawCluster(svg, cluster, data, columns, yScale,
                     "cluster" + cluster + d);
             let x = fields[nextField]["scale"](fields[nextField]["df"][j]);
 
-            return x + randomNoise();
+            return x + noise;
           }
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
