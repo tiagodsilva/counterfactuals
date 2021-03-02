@@ -15,15 +15,10 @@ function setGroups(divID, df) {
   clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
   let lenClusters = clusters.length;
   // console.log(clusters);
-  let mainSVG = d3.select("#visContainer")
-          .append("svg")
-          .attr("height", height)
-          .attr("width", width + (width + 9 - margin.left) * (lenClusters - 1))
-          .attr("id", "vis");
 
-  let svg = mainSVG.append("svg")
+  let svg = div.append("svg")
         .attr("height", height)
-        .attr("width", width)
+        .attr("width", width + 3.9)
         .attr("id", "cluster0");
 
   let yAxisGroup = svg.append("g")
@@ -44,7 +39,8 @@ function getClusterData(data, columns, cluster, yScale) {
   let df = filterCluster(data, cluster);
   let ncol = columns.length - 1;
   let axisGroup = d3.select("#cluster" + cluster + "Axis");
-  for(let field of columns.slice(1, columns.length - 1)) {
+  for(let i = 1; i < columns.length - 1; i++) {
+    let field = columns[i];
     dfField = parseNumbers(d3.map(df, d => d[field]));
     fields[field] = {}
     // the df.length'th row is the feature direction
@@ -64,12 +60,16 @@ function getClusterData(data, columns, cluster, yScale) {
     let min = fdir == 1 ? d3.min(dfField) : d3.max(dfField);
     let max = fdir == 1 ? d3.max(dfField) : d3.min(dfField);
 
+    // we will get a regular initial noise
+    // initally, I was using a random nosie; however,
+    // the visual was a kinda of strange
+
     if(min == max) {
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min, field == "Passengers" ||
                     field == "BusStops" ? max + 1e-3 * max : max])
               .range([margin.left, width - margin.right]);
-        
+
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
               .ticks(2)
@@ -79,7 +79,7 @@ function getClusterData(data, columns, cluster, yScale) {
     } else {
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min, max])
-              .range([margin.left - 2, width - margin.right + 2]);
+              .range([margin.left - 4, width - margin.right + 4]);
 
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
@@ -95,7 +95,7 @@ function getClusterData(data, columns, cluster, yScale) {
   return fields;
 }
 
-function getNoise(lines, id) {
+function getNoise(lines, id, range, l, r) {
   let line = lines.getElementsByClassName(id)[0];
   let lineX = d3.select(line).attr("x2");
 
@@ -105,18 +105,19 @@ function getNoise(lines, id) {
   let nearLines = [];
   for(let l of arrayOfLines) {
     let x = d3.select(l).attr("x2");
-    if(Math.abs(x - lineX) < 4) {
+    if(Math.abs(x - lineX) < 2 * range) {
       nearLines.push(l);
     }
   }
 
   let xs = d3.map(nearLines, d => d3.select(d).attr("x2"));
 
+  let noiseRange = nearLines.length > 2 ? 2 : 1;
   let noise = 0;
   if(nearLines.length != 0) {
     let noiseScale = d3.scaleLinear()
             .domain([d3.min(xs), d3.max(xs)])
-            .range([-2, 2]);
+            .range([l ? 0 : -range, r ? 0 : range]);
     noise = noiseScale(lineX);
   }
 
@@ -169,7 +170,9 @@ function drawCluster(svg, cluster, data, columns, yScale,
         .attr("x1", (d, j) => {
           if(i == 1) {
             // for the initial field
-            return fields[previousField]["scale"](fields[previousField]["df"][j]);
+            let scale = fields[previousField]["scale"];
+            let self = fields[previousField]["df"][j];
+            return scale(self);
           } else {
             // for the other fields, we can get the actual x position
             let previousPreviousField = columns[i - 1];
@@ -185,21 +188,52 @@ function drawCluster(svg, cluster, data, columns, yScale,
         .attr("x2", (d, j) => {
           if(i == 1) {
             // we will count the colinear lines
-            let noise = randomNoise(-2, 2);
-            console.assert(noise >= -4 && noise <= 4);
-            return fields[nextField]["scale"](fields[nextField]["df"][j]) + noise;
+            let scale = fields[nextField]["scale"];
+            let self = fields[nextField]["df"][j];
+
+            let dir = d3.map(data, d => d[nextField]);
+            dir = dir[dir.length - 1];
+            let noise;
+            if(self == d3.max(fields[nextField]["df"])) {
+              noise = randomNoise(0.1, 2);
+            } else if(self == d3.min(fields[nextField]["df"])) {
+              noise = randomNoise(-2, -0.1);
+            } else {
+              noise = randomNoise(-2, 2);
+            }
+
+            return scale(self) + noise;
           } else {
             let previousPreviousField = columns[i - 1]
             let thisCluster = document.getElementById("cluster" + cluster + "Lines");
             let lines = thisCluster.getElementsByClassName(previousPreviousField +
                     previousField + "Lines")[0];
+
+            let scale = fields[nextField]["scale"];
+            let list = fields[nextField]["df"];
+
+            let dir = d3.map(data, d => d[nextField]);
+            dir = dir[dir.length - 1];
+            let x = list[j];
+
+            let r = false;
+            let l = false;
+            if(d3.min(list) != d3.max(list)) {
+              if(x == d3.min(list)) {
+                l = dir == 1;
+                r = dir == -1;
+              } else if(x == d3.max(list)) {
+                r = dir == 1;
+                l = dir == -1;
+              }
+            }
+            console.assert(!(r && l));
             // this function will check for the previous lines
             // and choose the random noise based on it
             let noise = getNoise(lines,
-                    "cluster" + cluster + d);
-            let x = fields[nextField]["scale"](fields[nextField]["df"][j]);
-
-            return x + noise;
+                    "cluster" + cluster + d, 2, l, r);
+            // maybe the noise isn't needed in the bottom axis.
+            return scale(x) + (nextField == "BusStops" ? 0 : noise);
           }
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
@@ -284,7 +318,7 @@ d3.csv("df_full.csv").then(function(data) {
   // now, we draw the horizontal axis
   // for this, we take the values of each field
   var skip = false;
-  let svgToSave = [];
+  // let svgToSave = [];
   for(let cluster of clusters) {
 
     drawCluster(svg, cluster, data, columns, yScale,
@@ -296,14 +330,11 @@ d3.csv("df_full.csv").then(function(data) {
       skip = true;
     }
 
-    svgToSave.push(svg);
-
     if(cluster != d3.max(clusters)) {
       let boundingBox = svg._groups[0][0].getBoundingClientRect();
       svg = container
             .append("svg")
-            .attr("x", boundingBox.right - 15)
-            .attr("width", width + 9)
+            .attr("width", width + 3.9)
             .attr("height", height)
             .attr("id", "cluster" + (cluster + 1));
     }
