@@ -64,19 +64,28 @@ function getClusterData(data, columns, cluster, yScale) {
     let min = fdir == 1 ? d3.min(dfField) : d3.max(dfField);
     let max = fdir == 1 ? d3.max(dfField) : d3.min(dfField);
 
-    fields[field]["scale"] = d3.scaleLinear()
-            .domain([min, max])
-            .range([margin.left - 2, width - margin.right + 2]);
-
-    fields[field]["axis"] = d3.axisBottom()
-            .scale(fields[field]["scale"])
-            .ticks(2)
-            .tickSizeOuter(0)
-
     if(min == max) {
-      fields[field]["axis"] = fields[field]["axis"]
-              .tickFormat(x => Math.floor(x * 1000)/1000);
-    }
+      fields[field]["scale"] = d3.scaleLinear()
+              .domain([min, field == "Passengers" ||
+                    field == "BusStops" ? max + 1e-3 * max : max])
+              .range([margin.left, width - margin.right]);
+        
+      fields[field]["axis"] = d3.axisBottom()
+              .scale(fields[field]["scale"])
+              .ticks(2)
+              .tickSizeOuter(0)
+              .tickFormat(x => Math.floor(x * 1000)/1000)
+              .tickValues([max]);
+    } else {
+      fields[field]["scale"] = d3.scaleLinear()
+              .domain([min, max])
+              .range([margin.left - 2, width - margin.right + 2]);
+
+      fields[field]["axis"] = d3.axisBottom()
+              .scale(fields[field]["scale"])
+              .ticks(2)
+              .tickSizeOuter(0)
+          }
 
     fields[field]["group"].call(fields[field]["axis"])
         .call(g => g.select(".domain"))
