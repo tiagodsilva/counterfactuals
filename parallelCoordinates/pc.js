@@ -94,38 +94,51 @@ function getClusterData(data, columns, cluster, yScale) {
   return fields;
 }
 
-function getNoise(data, lines, id,
-  range, l, r, previousData, previousScale, dir) {
-  let line = lines.getElementsByClassName(id)[0];
-  let lineX = d3.select(line).attr("x2");
-
-  if(d3.min(previousData) == d3.max(previousData)) {
-    return 0;
-  }
+function getNoise(lines, x, self, range) {
   // we will get the near lines
   let toArray = d => Array.prototype.slice.call(d);
   let arrayOfLines = toArray(lines.getElementsByTagName("line"));
   let nearLines = [];
-  for(let l of arrayOfLines) {
-    let x = d3.select(l).attr("x2");
-    if(Math.abs(x - lineX) < 2 * range) {
+  let index = 0;
+  for(let i = 0; i < arrayOfLines.length; i++) {
+    let l = arrayOfLines[i];
+    let lx = d3.select(l).attr("x2");
+
+    if(Math.abs(lx - x) < 2 * range) {
       nearLines.push(l);
     }
   }
 
+  nearLines.sort(function(a, b) {
+    return d3.select(a).attr("x2") - d3.select(b).attr("x2")
+  });
+
+  for(let w = 0; w < nearLines.length; w++) {
+    if(d3.select(nearLines[w]).attr("x2") == x) {
+      index = w;
+    }
+  }
+
+  // console.log(index);
   let xs = d3.map(nearLines, d => d3.select(d).attr("x2"));
 
   let noiseRange = nearLines.length > 2 ? 2 : 1;
   let noise = 0;
 
-  if(nearLines.length != 0) {
-    let noiseScale = d3.scaleLinear()
-            .domain([d3.min(xs), d3.max(xs)])
-            .range([l ? 0 : -range, r ? 0 : range]);
-    noise = noiseScale(lineX);
-  }
+  let noiseScale = d3.scaleLinear()
+          .domain([0, nearLines.length])
+          .range([-range, range]);
 
-  return noise;
+  return {noiseScale, index};
+}
+
+function getPreviousX(fieldA, fieldB, cluster, d) {
+  let thisCluster = document.getElementById("cluster" + cluster + "Lines");
+  let lines = thisCluster.getElementsByClassName(fieldA +
+            fieldB + "Lines")[0];
+  let previousLine = lines.getElementsByClassName("cluster" + cluster + d)[0];
+  let previousX = d3.select(previousLine).attr("x2");
+  return previousX;
 }
 
 function drawCluster(svg, cluster, data, columns, yScale,
@@ -171,6 +184,16 @@ function drawCluster(svg, cluster, data, columns, yScale,
         .join("line")
         .attr("class", d => "cluster" + cluster + d)
         .attr("cluster", cluster)
+        .attr("debug", (d, j) => {
+
+          let previousScale = fields[previousField]["scale"];
+          let previousSelf = fields[previousField]["df"][j];
+
+          let nextScale = fields[nextField]["scale"];
+          let nextSelf = fields[nextField]["df"][j];
+
+          return "[" + previousSelf + "," +  nextSelf + "]";
+        })
         .attr("x1", (d, j) => {
           if(i == 1) {
             // for the initial field
@@ -180,11 +203,8 @@ function drawCluster(svg, cluster, data, columns, yScale,
           } else {
             // for the other fields, we can get the actual x position
             let previousPreviousField = columns[i - 1];
-            let thisCluster = document.getElementById("cluster" + cluster + "Lines");
-            let lines = thisCluster.getElementsByClassName(previousPreviousField +
-                      previousField + "Lines")[0];
-            let previousLine = lines.getElementsByClassName("cluster" + cluster + d)[0];
-            let previousX = d3.select(previousLine).attr("x2");
+            let previousX = getPreviousX(previousPreviousField, previousField,
+                    cluster, d);
             return previousX;
           }
         })
@@ -207,7 +227,7 @@ function drawCluster(svg, cluster, data, columns, yScale,
               noise = randomNoise(-noiseRange, noiseRange);
             }
 
-            return scale(self) + 0;
+            return scale(self) + noise;
           } else {
             let previousPreviousField = columns[i - 1]
 
@@ -216,21 +236,44 @@ function drawCluster(svg, cluster, data, columns, yScale,
             let lines = thisCluster.getElementsByClassName(previousPreviousField +
                     previousField + "Lines")[0];
 
+            let dir = d3.map(data, d => d[nextField]);
+            dir = dir[dir.length - 1];
+
             let scale = fields[nextField]["scale"];
             let list = fields[nextField]["df"];
 
             let previousData = fields[previousField]["df"];
             let previousScale = fields[previousField]["scale"];
 
+            let range = 2;
+            let previousSelf = previousScale(previousData[j]);
+            let previousX = getPreviousX(previousPreviousField, previousField,
+                    cluster, d);
+            let {noiseScale, index} = getNoise(lines, previousX, previousSelf, range);
             // this function will check for the previous lines
             // and choose the random noise based on it
+            // console.log(dir);
+            if(dir == 1 || d3.min(list) == d3.max(list)) {
+              if(self == d3.min(list)) {
+                noiseScale = noiseScale.range([.1, range * 1.5]);
+              } else if(self == d3.max(list)) {
+                noiseScale = noiseScale.range([-range * 1.5, -.1]);
+              }
+            } else if(dir == -1) {
+              if(self == d3.min(list)) {
+                noiseScale = noiseScale.range([-range * 1.5, -.1]);
+              } else if(self == d3.max(list)) {
+                noiseScale = noiseScale.range([.1, range * 1.5]);
+              }
+            }
 
+            let noise = noiseScale(index);
             // maybe the noise isn't needed in the bottom axis.
-            return scale(self);
+            return scale(self) + noise;
           }
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
-        .attr("stroke-width", 1 || thickScale(clusterSizes[cluster]))
+        .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
         .attr("stroke", "blue")
         .on("mouseover", function(event, d) {
           // console.log(d)
@@ -249,7 +292,7 @@ function drawCluster(svg, cluster, data, columns, yScale,
             d3.select("#cluster" + this.attributes.cluster.value + "Lines")
               .selectAll("line")
               .attr("stroke", "blue")
-              .attr("stroke-width", 1 || thickScale(clusterSizes[cluster]))
+              .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
               .attr("opacity", 1);
         });
 
