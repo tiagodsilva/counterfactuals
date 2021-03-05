@@ -110,20 +110,22 @@ function DrawPointGroups(divID,divLabel,dataset){
         //var selectedDots = selected[0].map(d=>d.id);
         var selectedDots  = lasso.selectedItems()._groups[0].map(d=>d.id);
 
-        clusters.push(selectedDots);
-        // console.log(clusters)
-        //Thiago
+        if(selectedDots.length > 0) {
+          clusters.push(selectedDots);
+          // console.log(clusters)
+          //Thiago
 
-        d3.csv("data/cfa.csv").then(function(data) {
+          d3.csv("data/cfa.csv").then(function(data) {
 
-          let columns = Object.keys(data[0]);
-          columns = columns.filter(d => d != "Clusters" && d != "");
-          let ncol = columns.length;
-          d3.select("#vis").remove()
-          setDiv("vis"); 
-          drawAllClusters(data, columns, ncol, clusters);
+            let columns = Object.keys(data[0]);
+            columns = columns.filter(d => d != "Clusters" && d != "");
+            let ncol = columns.length;
+            d3.select("#vis").remove()
+            setDiv("vis");
+            drawAllClusters(data, columns, ncol, clusters);
 
-        });
+          });
+        } 
 
     };
 

@@ -353,7 +353,7 @@ function drawAllClusters(data, columns, ncol, clusters) {
     drawCluster(svg, clusters[i], i, data, columns, ncol, yScale);
 
     if(!skip) {
-      width = width - margin.left;
+      width = width - margin.left + 9;
       margin.left = 9;
       skip = true;
     }
