@@ -312,13 +312,39 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
 
 }
 
+function addContextMenu(svg) {
+	// initially, we need to remove the svg 
+	svg.on("contextmenu", function(event, d) {
+		const self = this; 
+		// before removing it, 
+		// we need to move the subsequent clusters 
+		let regex = /\d+/; 
+		let clusterIndex = +self.id.match(regex)[0]; 
+		let container = document.getElementById("vis"); 
+		let cluster = container.lastChild; 
+		let maxCluster = +cluster.id.match(regex)[0]; 
+		// now, we will rename each cluster 
+		// that lies after this 
+		for(let i = clusterIndex + 1; i < maxCluster; i++) {
+			d3.select("#cluster" + i) 
+				.attr("id", "cluster" + (i - 1)); 
+			
+			d3.select("#cluster" + i) 
+				.select(".clusterName") 
+				.text("Cluster" + (i - 1)); 
+		} 
+		// now, we can remove this svg 
+		d3.select(self).remove();
+		
+	}) 
+}  
 function drawInitialCluster(data, columns, ncol, cluster) {
   margin = {top: 25, bottom: 25, left: 125, right: 17};
   height = 599;
   width = 229;
   let svg = setGroups("#vis", data);
-  let containre = d3.select("#vis");
-
+  let containre = d3.select("#vis"); 
+  addContextMenu(svg); 
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
@@ -345,7 +371,7 @@ function newCluster(data, columns, ncol, cluster, index) {
         .attr("width", width)
         .attr("height", height)
         .attr("id", "cluster" + index);
-
+  addContextMenu(svg); 
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
