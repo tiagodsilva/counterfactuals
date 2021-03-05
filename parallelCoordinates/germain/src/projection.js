@@ -120,12 +120,18 @@ function DrawPointGroups(divID,divLabel,dataset){
             let columns = Object.keys(data[0]);
             columns = columns.filter(d => d != "Clusters" && d != "");
             let ncol = columns.length;
-            d3.select("#vis").remove()
-            setDiv("vis");
-            drawAllClusters(data, columns, ncol, clusters);
-
+            // draw the initial cluster
+            // it is particular because it will carry the axis
+            if(clusters.length == 1) {
+              drawInitialCluster(data, columns, ncol, clusters[0]);
+            }
+            // drawAllClusters(data, columns, ncol, clusters);
+            if(clusters.length > 1) {
+              newCluster(data, columns, ncol, clusters[clusters.length - 1],
+                      clusters.length - 1); 
+            }
           });
-        } 
+        }
 
     };
 

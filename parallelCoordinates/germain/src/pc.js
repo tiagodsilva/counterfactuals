@@ -312,29 +312,17 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
 
 }
 
-function drawAllClusters(data, columns, ncol, clusters) {
-
+function drawInitialCluster(data, columns, ncol, cluster) {
   margin = {top: 25, bottom: 25, left: 125, right: 17};
   height = 599;
   width = 229;
-
   let svg = setGroups("#vis", data);
-  let container = d3.select("#vis");
-
-  // get the columns and the Y scale
-  // let columns = Object.keys(data[0])
-  // let ncol = columns.length - 1;
-
-  // get the clusters
-  // let clusters = d3.map(data, d => d.Clusters);
-  // clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
-  // clusters = parseNumbers(clusters).sort((a, b) => a - b);
+  let containre = d3.select("#vis");
 
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
 
-  // draw both axis
   let yAxis = d3.axisLeft()
           .scale(yScale);
 
@@ -343,32 +331,26 @@ function drawAllClusters(data, columns, ncol, clusters) {
     .call(g => g.selectAll("line").attr("opacity", 0))
     .call(g => g.selectAll(".domain").attr("opacity", 0));
 
-  // now, we draw the horizontal axis
-  // for this, we take the values of each field
-  var skip = false;
-  // let svgToSave = [];
+    drawCluster(svg, cluster, 0, data, columns, ncol, yScale);
 
-  for(let i = 0; i < clusters.length; i++) {
+    width = width - margin.left + 9;
+    margin.left = 9;
 
-    drawCluster(svg, clusters[i], i, data, columns, ncol, yScale);
+}
 
-    if(!skip) {
-      width = width - margin.left + 9;
-      margin.left = 9;
-      skip = true;
-    }
+function newCluster(data, columns, ncol, cluster, index) {
+  let container = d3.select("#vis");
+  let svg = container
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("id", "cluster" + index);
 
-    if(i != clusters.length - 1) {
-      // let boundingBox = svg._groups[0][0].getBoundingClientRect();
-      svg = container
-            .append("svg")
-            .attr("width", width + 9)
-            .attr("height", height)
-            .attr("id", "cluster" + (i + 1));
-    }
-  }
-  // drawCluster(svg, 1, data, columns, yScale)
+  let yScale = d3.scaleBand()
+          .domain(columns)
+          .range([margin.top, height - margin.bottom]);
 
+  drawCluster(svg, cluster, index, data, columns, ncol, yScale);
 }
 let margin = {top: 25, bottom: 25, left: 125, right: 17};
 let height = 599;

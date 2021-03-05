@@ -282,7 +282,7 @@ d3.csv("df_full.csv").then(function(data) {
               clusterSizes, thickScale);
 
     if(!skip) {
-      width = width - margin.left;
+      width = width - margin.left + 9;
       margin.left = 9;
       skip = true;
     }
