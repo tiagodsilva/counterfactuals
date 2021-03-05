@@ -51,7 +51,7 @@ function getGraph(data, keys) {
 }
 
 function drawCluster(data, cluster, svg,
-    width, height, sankey) {
+    width, height, margin, sankey) {
   const df = d3.filter(data, d => d.Clusters == cluster);
 
   let keys = data.columns;
@@ -65,6 +65,7 @@ function drawCluster(data, cluster, svg,
   });
 
   svg.append("g")
+    .attr("transform", "translate(" + margin.right + ",0)")
     .selectAll("rect")
     .data(nodes)
     .join("rect")
@@ -77,11 +78,19 @@ function drawCluster(data, cluster, svg,
 
   svg.append("g")
       .attr("fill", "none")
+      .attr("transform", "translate(" + margin.right + ",0)")
     .selectAll("g")
     .data(links)
     .join("path")
       .attr("d", d3.sankeyLinkHorizontal())
       .attr("stroke", "blue")
+      .on("mouseover", function(event, d) {
+        d3.select(this).attr("stroke", "red");
+      })
+      .on("mouseout", function(event, d) {
+        d3.select(this).attr("stroke", "blue");
+      })
+      .attr("id", d => d.names)
       .attr("opacity", .5)
       .attr("stroke-width", d => d.width)
       .style("mix-blend-mode", "multiply")
@@ -127,14 +136,28 @@ d3.csv("df_full.csv").then(function(data) {
   let svg = d3.select("#vis")
           .append("svg")
           .attr("id", "cluster" + (clusters.length - 1))
+          .attr("n", clustersSize[clusters.length - 1])
           .attr("y", margin.top)
           .attr("height", wScale(clustersSize[clusters.length - 1]))
-          .attr("width", width);
+          .attr("width", width + margin.right);
 
   let boundingBox, y;
+
+  svg.append("g")
+    .attr("class", "clusterName")
+    .append("text")
+    .attr("id", "cluster" + (clusters.length - 1) + "text")
+    .attr("font-size", 15)
+    .attr("font-color", "black")
+    .attr("fill", "black")
+    .attr("transform", "rotate(-90)translate(" +
+        (-wScale((clustersSize[clusters.length - 1 - 1]))/2) +
+        "," + (margin.right - 5) + ")")
+    .text(clusters.length - 1);
+
   for(let cluster of clusters) {
-    drawCluster(data, cluster, svg, wScale(clustersSize[cluster]),
-            height, sankey);
+    drawCluster(data, cluster, svg, width,
+      wScale(clustersSize[cluster]), margin, sankey);
 
     if(cluster == 0) break;
 
@@ -143,9 +166,22 @@ d3.csv("df_full.csv").then(function(data) {
     svg = d3.select("#vis")
       .append("svg")
       .attr("id", "cluster" + (cluster - 1))
+      .attr("n", clustersSize[cluster - 1])
       .attr("y", y)
       .attr("height", wScale(clustersSize[cluster - 1]))
-      .attr("width", width);
+      .attr("width", width + margin.right);
+
+    svg.append("g")
+      .attr("class", "clusterName")
+      .append("text")
+      .attr("id", "cluster" + cluster + "text")
+      .attr("font-size", 15)
+      .attr("font-color", "black")
+      .attr("fill", "black")
+      .attr("transform", "rotate(-90)translate(" +
+          (-wScale(clustersSize[cluster - 1])/2) +
+          "," + (margin.right - 5) + ")")
+      .text(cluster - 1);
 
     sankey = d3.sankey()
       .nodeSort(null)
@@ -155,6 +191,6 @@ d3.csv("df_full.csv").then(function(data) {
       .extent([[0, 5], [width, wScale(clustersSize[cluster - 1]) - 5]]);
   }
 
-  d3.select("#vis").attr("transform", "rotate(90)translate(-1699, -159)");
+  d3.select("#vis").attr("transform", "rotate(90)translate(-1599, -159)");
 
 })

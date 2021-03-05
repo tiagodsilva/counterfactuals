@@ -1,5 +1,5 @@
 function filterCluster(data, cluster) {
-  return d3.filter(data, d => d.Clusters == cluster);
+  return d3.filter(data, d => cluster.includes(d[""]));
 }
 
 function parseNumbers(arr) {
@@ -28,18 +28,26 @@ function setGroups(divID, df) {
   return svg;
 }
 
+function setDiv(divID) {
+  d3.select("#container")
+    .append("div")
+    .attr("id", divID)
+    .style("display", "inline-block")
+    .style("height", "100%");
+}
+
 function randomNoise(l, r) {
   let xl = l || -2
   var xr = r || 2
   return Math.random() * (xr - xl) + xl
 }
 
-function getClusterData(data, columns, cluster, yScale) {
+function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   let fields = {}
   let df = filterCluster(data, cluster);
-  let ncol = columns.length - 1;
-  let axisGroup = d3.select("#cluster" + cluster + "Axis");
-  for(let i = 1; i < columns.length - 1; i++) {
+  // let ncol = columns.length - 1;
+  let axisGroup = d3.select("#cluster" + clusterIndex + "Axis");
+  for(let i = 0; i < ncol; i++) {
     let field = columns[i];
     dfField = parseNumbers(d3.map(df, d => d[field]));
     fields[field] = {}
@@ -133,6 +141,7 @@ function getNoise(lines, x, self, range) {
 
 function getPreviousX(fieldA, fieldB, cluster, d) {
   let thisCluster = document.getElementById("cluster" + cluster + "Lines");
+  // console.log(fieldA, fieldB);
   let lines = thisCluster.getElementsByClassName(fieldA +
             fieldB + "Lines")[0];
   let previousLine = lines.getElementsByClassName("cluster" + cluster + d)[0];
@@ -140,7 +149,8 @@ function getPreviousX(fieldA, fieldB, cluster, d) {
   return previousX;
 }
 
-function drawCluster(svg, cluster, data, columns, yScale) {
+function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
+          clusterSizes, thickScale) {
   svg.append("g")
     .attr("class", "clusterName")
     .append("text")
@@ -148,40 +158,40 @@ function drawCluster(svg, cluster, data, columns, yScale) {
     .attr("y", margin.top)
     .attr("text-anchor", "middle")
     .attr("font-size", 10.5)
-    .text("Cluster " + cluster);
+    .text("Cluster " + clusterIndex);
 
   let axisGroup = svg.append("g")
-          .attr("id", "cluster" + cluster + "Axis");
+          .attr("id", "cluster" + clusterIndex + "Axis");
 
-  let fields = getClusterData(data, columns, cluster, yScale);
+  let fields = getClusterData(data, columns, ncol, cluster, clusterIndex, yScale);
   var hShift = 5;
 
   let df = filterCluster(data, cluster);
-  let ncol = columns.length - 1;
+  // let ncol = columns.length - 1;
   let counterfactuals = d3.map(df, d => d[""]);
 
   // we draw the lines
   let svgLines = svg.append("g")
-          .attr("id", "cluster" + cluster + "Lines")
+          .attr("id", "cluster" + clusterIndex + "Lines")
           .attr("transform", "translate(" + hShift + "," + margin.top + ")");
 
   let svgMouseOver = svg.append("g")
           .attr("id", "mouseOverArea")
           .attr("transform", "translate(" + hShift + "," + margin.top + ")");
 
-  for(let i = 1; i < ncol - 1; i ++) {
+  for(let i = 0; i < ncol - 1; i ++) {
     // we will draw the lines here
     var previousField = columns[i];
     var nextField = columns[i + 1];
-
+    // console.log(fields[previousField]);
     var lineGroup = svgLines.append("g")
         .attr("class", previousField + nextField + "Lines");
 
     lineGroup.selectAll("line")
       .data(counterfactuals)
         .join("line")
-        .attr("class", d => "cluster" + cluster + d)
-        .attr("cluster", cluster)
+        .attr("class", d => "cluster" + clusterIndex + d)
+        .attr("cluster", clusterIndex)
         .attr("debug", (d, j) => {
 
           let previousScale = fields[previousField]["scale"];
@@ -193,7 +203,7 @@ function drawCluster(svg, cluster, data, columns, yScale) {
           return "[" + previousSelf + "," +  nextSelf + "]";
         })
         .attr("x1", (d, j) => {
-          if(i == 1) {
+          if(i == 0) {
             // for the initial field
             let scale = fields[previousField]["scale"];
             let self = fields[previousField]["df"][j];
@@ -202,13 +212,13 @@ function drawCluster(svg, cluster, data, columns, yScale) {
             // for the other fields, we can get the actual x position
             let previousPreviousField = columns[i - 1];
             let previousX = getPreviousX(previousPreviousField, previousField,
-                    cluster, d);
+                    clusterIndex, d);
             return previousX;
           }
         })
         .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
         .attr("x2", (d, j) => {
-          if(i == 1) {
+          if(i == 0) {
             // we will count the colinear lines
             let scale = fields[nextField]["scale"];
             let self = fields[nextField]["df"][j];
@@ -230,7 +240,7 @@ function drawCluster(svg, cluster, data, columns, yScale) {
             let previousPreviousField = columns[i - 1]
 
             let self = fields[nextField]["df"][j];
-            let thisCluster = document.getElementById("cluster" + cluster + "Lines");
+            let thisCluster = document.getElementById("cluster" + clusterIndex + "Lines");
             let lines = thisCluster.getElementsByClassName(previousPreviousField +
                     previousField + "Lines")[0];
 
@@ -246,7 +256,7 @@ function drawCluster(svg, cluster, data, columns, yScale) {
             let range = 2;
             let previousSelf = previousScale(previousData[j]);
             let previousX = getPreviousX(previousPreviousField, previousField,
-                    cluster, d);
+                    clusterIndex, d);
             let {noiseScale, index} = getNoise(lines, previousX, previousSelf, range);
             // this function will check for the previous lines
             // and choose the random noise based on it
@@ -275,7 +285,7 @@ function drawCluster(svg, cluster, data, columns, yScale) {
         .attr("stroke", "blue")
         .on("mouseover", function(event, d) {
           // console.log(d)
-          var elementClass = "cluster" + cluster + d;
+          var elementClass = "cluster" + clusterIndex + d;
           d3.select("#cluster" + this.attributes.cluster.value + "Lines")
             .selectAll("line")
             .attr("opacity", .05);
@@ -286,7 +296,7 @@ function drawCluster(svg, cluster, data, columns, yScale) {
             .attr("opacity", 1);
         })
         .on("mouseout", function(event, d) {
-            var elementClass = "cluster" + cluster + d;
+            var elementClass = "cluster" + clusterIndex + d;
             d3.select("#cluster" + this.attributes.cluster.value + "Lines")
               .selectAll("line")
               .attr("stroke", "blue")
@@ -301,27 +311,27 @@ function drawCluster(svg, cluster, data, columns, yScale) {
   }
 
 }
-let margin = {top: 25, bottom: 25, left: 125, right: 17};
-let height = 599;
-let width = 219;
 
-d3.csv("df_full.csv").then(function(data) {
-  // read the data
+function drawAllClusters(data, columns, ncol, clusters) {
+
+  margin = {top: 25, bottom: 25, left: 125, right: 17};
+  height = 599;
+  width = 229;
 
   let svg = setGroups("#vis", data);
   let container = d3.select("#vis");
 
   // get the columns and the Y scale
-  let columns = Object.keys(data[0])
-  let ncol = columns.length - 1;
+  // let columns = Object.keys(data[0])
+  // let ncol = columns.length - 1;
 
   // get the clusters
-  let clusters = d3.map(data, d => d.Clusters);
-  clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
-  clusters = parseNumbers(clusters).sort((a, b) => a - b);
+  // let clusters = d3.map(data, d => d.Clusters);
+  // clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
+  // clusters = parseNumbers(clusters).sort((a, b) => a - b);
 
   let yScale = d3.scaleBand()
-          .domain(columns.slice(1, ncol))
+          .domain(columns)
           .range([margin.top, height - margin.bottom]);
 
   // draw both axis
@@ -333,30 +343,14 @@ d3.csv("df_full.csv").then(function(data) {
     .call(g => g.selectAll("line").attr("opacity", 0))
     .call(g => g.selectAll(".domain").attr("opacity", 0));
 
-  // for the thickness scale, we need to get the
-  // max size of a cluster
-
-  var maxCluster = 0;
-  var clusterSizes = {};
-  for(let cluster of clusters) {
-    var curSize = d3.filter(data, d => d.Clusters == cluster).length;
-    clusterSizes[cluster] = curSize;
-    if(curSize > maxCluster) {
-      maxCluster = curSize;
-    }
-  }
-  let thickScale = d3.scaleLinear()
-          .domain([0, maxCluster])
-          .range([0, 2.5]);
-
   // now, we draw the horizontal axis
   // for this, we take the values of each field
   var skip = false;
   // let svgToSave = [];
-  for(let cluster of clusters) {
 
-    drawCluster(svg, cluster, data, columns, yScale,
-              clusterSizes, thickScale);
+  for(let i = 0; i < clusters.length; i++) {
+
+    drawCluster(svg, clusters[i], i, data, columns, ncol, yScale);
 
     if(!skip) {
       width = width - margin.left;
@@ -364,15 +358,25 @@ d3.csv("df_full.csv").then(function(data) {
       skip = true;
     }
 
-    if(cluster != d3.max(clusters)) {
-      let boundingBox = svg._groups[0][0].getBoundingClientRect();
+    if(i != clusters.length - 1) {
+      // let boundingBox = svg._groups[0][0].getBoundingClientRect();
       svg = container
             .append("svg")
-            .attr("width", width + 3.9)
+            .attr("width", width + 9)
             .attr("height", height)
-            .attr("id", "cluster" + (cluster + 1));
+            .attr("id", "cluster" + (i + 1));
     }
   }
   // drawCluster(svg, 1, data, columns, yScale)
 
+}
+let margin = {top: 25, bottom: 25, left: 125, right: 17};
+let height = 599;
+let width = 229;
+
+/*
+d3.csv("data/df_full.csv").then(function(data) {
+  // read the data
+  drawAllClusters(data);
 });
+*/
