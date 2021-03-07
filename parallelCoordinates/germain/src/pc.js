@@ -49,7 +49,7 @@ function randomNoise(l, r) {
   return Math.random() * (xr - xl) + xl
 }
 
-function sortParallel(indexes, index, df, columns) {
+function sortParallel(indexes, index, df, columns, fdir) {
   // console.log(indexes);
   if(indexes.length == 1 || index == columns.length) {
     // if(indexes.length != 1) {console.log(indexes)};
@@ -61,9 +61,9 @@ function sortParallel(indexes, index, df, columns) {
   let xs = filter(df, indexes); // get the indexes
 
   let returnIndexes = [];
-  for(let value of sorted(unique(xs, feat))) {
+  for(let value of sorted(unique(xs, feat), fdir[feat])) {
     // we need the indexes of `value` in xs
-    var a = sortParallel(getIndexes(xs, feat, value), index + 1, df, columns);
+    var a = sortParallel(getIndexes(xs, feat, value), index + 1, df, columns, fdir);
     // console.log("a", a);
     returnIndexes = returnIndexes.concat(a);
     // console.log("b", returnIndexes);
@@ -110,8 +110,8 @@ function unique(list, feat) {
   return arr.filter((v, i, s) => s.indexOf(v) == i);
 }
 
-function sorted(list) {
-  return list.slice().sort((a, b) => a - b);
+function sorted(list, dir) {
+  return list.slice().sort((a, b) => dir * (a - b));
 }
 
 function map(list, field) {
@@ -132,14 +132,13 @@ function debug(data, columns, ncol, fdir) {
     let max = d3.max(values);
     let min = d3.min(values);
     let range = max - min;
-
     for(let value of values) {
       let iValues = getIndexes(aData, feat, value);
       if(j == 0) {
-        indexes = sortParallel(iValues, j + 1, aData, columns);
+        indexes = sortParallel(iValues, j + 1, aData, columns, fdir);
         // sortp(iValues, j + 1, aData, columns);
       } else {
-        indexes = sortParallel(iValues, j - 1, aData, columns);
+        indexes = sortParallel(iValues, j - 1, aData, columns, fdir);
         // sortp(iValues, j + 1, aData, columns);
       }
 
@@ -147,7 +146,7 @@ function debug(data, columns, ncol, fdir) {
 
       for(let i = 0; i < indexes.length; i++) {
         steps[i] = step * range * i - step * range * indexes.length/2;
-        aData[indexes[i]][feat] = +aData[indexes[i]][feat] + steps[i];
+        aData[indexes[i]][feat] = +aData[indexes[i]][feat] + fdir[feat] * steps[i];
       }
     }
   }
@@ -173,7 +172,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     fields[field] = {}
     // the df.length'th row is the feature direction
     fields[field]["df"] = dfField;
-
+    // fields[field]["nf"] = nf;
     var fdir = d3.map(data, d => d[field]);
     fdir = fdir[fdir.length - 1];
     // draw the horizontal axis correspondent to
@@ -185,22 +184,24 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
             .attr("transform",
                 "translate(" + hShift + "," + vShift + ")");
 
-    // add the axis
+    // add the axis (check feature direction)
     let min = fdir == 1 ? d3.min(dfField) : d3.max(dfField);
     let max = fdir == 1 ? d3.max(dfField) : d3.min(dfField);
 
     // I am using a random nosie; however,
     // the visual was a kinda of strange
 
-    if(d3.min(nf) == d3.max(nf)) {
+    if(min == max) {
       fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max * 2])
+              .domain([min, max + 1e-3])
               .range([margin.left, width - margin.right]);
 
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
               .ticks(2)
-              .tickSizeOuter(0);
+              .tickSizeOuter(0)
+              .tickFormat(x => Math.floor(x * 1000)/1000)
+              .tickValues([max]);
     } else {
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min, max])
