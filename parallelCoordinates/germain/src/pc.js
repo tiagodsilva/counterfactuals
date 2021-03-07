@@ -131,7 +131,7 @@ function debug(data, columns, ncol, fdir) {
     let values = unique(aData, feat);
     let max = d3.max(values);
     let min = d3.min(values);
-    let range = max - min;
+    let range = max == min ? 1 : max - min;
     for(let value of values) {
       let iValues = getIndexes(aData, feat, value);
       if(j == 0) {
@@ -158,8 +158,13 @@ function debug(data, columns, ncol, fdir) {
 function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   let fields = {}
   featureDirections = data[data.length - 1];
-  let df = debug(filterCluster(data, cluster), columns, ncol, featureDirections);
   let noiseFree = filterCluster(data, cluster);
+  let nf = {};
+  for(let field of columns) {
+    nf[field] = d3.map(noiseFree, d => d[field]);
+  }
+  let df = debug(filterCluster(data, cluster), columns, ncol, featureDirections);
+  // let noiseFree = filterCluster(data, cluster);
   // console.log(df);
   // df = debug(df, columns, ncol);
   // console.log(df);
@@ -168,10 +173,13 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   for(let i = 0; i < ncol; i++) {
     let field = columns[i];
     dfField = parseNumbers(d3.map(df, d => d[field]));
-    let nf = parseNumbers(d3.map(noiseFree, d => d[field]));
+    // let nf = parseNumbers(d3.map(filterCluster(data, cluster), d => d[field]));
+
     fields[field] = {}
     // the df.length'th row is the feature direction
     fields[field]["df"] = dfField;
+    fields[field]["nf"] = nf;
+    // console.log(nf);
     // fields[field]["nf"] = nf;
     var fdir = d3.map(data, d => d[field]);
     fdir = fdir[fdir.length - 1];
@@ -188,12 +196,14 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     let min = fdir == 1 ? d3.min(dfField) : d3.max(dfField);
     let max = fdir == 1 ? d3.max(dfField) : d3.min(dfField);
 
+    fields[field]["fdir"] = fdir;
     // I am using a random nosie; however,
     // the visual was a kinda of strange
 
-    if(min == max) {
+    // console.log(nf);
+    if(d3.min(nf[field]) == d3.max(nf[field])) {
       fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max + 1e-3])
+              .domain([min, max + fdir * 3])
               .range([margin.left, width - margin.right]);
 
       fields[field]["axis"] = d3.axisBottom()
@@ -285,13 +295,22 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
           return "[" + previousSelf + "," +  nextSelf + "]";
         })
         .attr("x1", (d, j) => {
-          let scale = fields[previousField]["scale"];
-          let self = fields[previousField]["df"][j];
-          return scale(self);
+          if(i == 0) {
+            let scale = fields[previousField]["scale"];
+            let self = fields[previousField]["df"][j];
+            return scale(self);
+          } else {
+            let previousPreviousField = columns[i - 1];
+            let previousX = getPreviousX(previousPreviousField, previousField,
+                    clusterIndex, d);
+            return previousX;
+          }
         })
         .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
         .attr("x2", (d, j) => {
-            let self = fields[nextField]["df"][j];
+            let data = fields[nextField]["df"];
+            let previousData = fields[previousField]["df"];
+            let self = data[j];
             let scale = fields[nextField]["scale"];
             return scale(self);
         })
