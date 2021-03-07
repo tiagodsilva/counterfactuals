@@ -131,7 +131,7 @@ function debug(data, columns, ncol, fdir) {
     let values = unique(aData, feat);
     let max = d3.max(values);
     let min = d3.min(values);
-    let range = max == min ? 1 : max - min;
+    let range = max == min ? 1 + max/15 : max - min;
     for(let value of values) {
       let iValues = getIndexes(aData, feat, value);
       if(j == 0) {
@@ -203,7 +203,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     // console.log(nf);
     if(d3.min(nf[field]) == d3.max(nf[field])) {
       fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max + fdir * 3])
+              .domain([min, max + (max/15 + 1) * fdir])
               .range([margin.left, width - margin.right]);
 
       fields[field]["axis"] = d3.axisBottom()
