@@ -50,7 +50,9 @@ function DrawPointGroups(divID,divLabel,dataset){
     var yScale = d3.scaleLinear().domain(ymar).range([ height, 0]);
 
 
+    // Axis for the parallel coordinates
 
+    d3.csv("data/cfa.csv").then(function(data) {drawAxis(data)});
 
     var svgCircle =svgGroupScatter.append('g')
     var circles = svgCircle.selectAll("dot")
@@ -120,16 +122,9 @@ function DrawPointGroups(divID,divLabel,dataset){
             let columns = Object.keys(data[0]);
             columns = columns.filter(d => d != "Clusters" && d != "");
             let ncol = columns.length;
-            // draw the initial cluster
-            // it is particular because it will carry the axis
-            if(clusters.length == 1) {
-              drawInitialCluster(data, columns, ncol, clusters[0]);
-            }
-            // drawAllClusters(data, columns, ncol, clusters);
-            if(clusters.length > 1) {
-              newCluster(data, columns, ncol, clusters[clusters.length - 1],
-                      clusters.length - 1); 
-            }
+
+            newCluster(data, columns, ncol, clusters[clusters.length - 1],
+                    clusters.length - 1);
           });
         }
 
