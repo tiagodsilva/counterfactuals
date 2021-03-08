@@ -295,16 +295,9 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
           return "[" + previousSelf + "," +  nextSelf + "]";
         })
         .attr("x1", (d, j) => {
-          if(i == 0) {
-            let scale = fields[previousField]["scale"];
-            let self = fields[previousField]["df"][j];
-            return scale(self);
-          } else {
-            let previousPreviousField = columns[i - 1];
-            let previousX = getPreviousX(previousPreviousField, previousField,
-                    clusterIndex, d);
-            return previousX;
-          }
+          let scale = fields[previousField]["scale"];
+          let self = fields[previousField]["df"][j];
+          return scale(self); 
         })
         .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
         .attr("x2", (d, j) => {
