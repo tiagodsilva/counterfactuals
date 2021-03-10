@@ -111,7 +111,8 @@ function unique(list, feat) {
 }
 
 function sorted(list, dir) {
-  return list.slice().sort((a, b) => dir * (a - b));
+  let direction = dir || 1
+  return list.slice().sort((a, b) => direction * (a - b));
 }
 
 function map(list, field) {
@@ -120,7 +121,7 @@ function map(list, field) {
 }
 // ************************************************************************ //
 
-function applyNoise(data, columns, ncol, origin) {
+function applyNoise(data, columns, ncol, origin, fdir) {
   let step = 1e-2;
 
   let aData = Object.assign({}, data);
