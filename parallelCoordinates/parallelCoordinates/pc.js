@@ -1,4 +1,4 @@
-function filterCluster(data, cluster) {
+  function filterCluster(data, cluster) {
   return d3.filter(data, d => cluster.includes(d[""]));
 }
 
@@ -111,7 +111,8 @@ function unique(list, feat) {
 }
 
 function sorted(list, dir) {
-  return list.slice().sort((a, b) => dir * (a - b));
+  let direction = dir || 1;
+  return list.slice().sort((a, b) => direction * (a - b));
 }
 
 function map(list, field) {
@@ -481,7 +482,7 @@ function newCluster(data, columns, ncol, cluster, index) {
         .attr("width", width)
         .attr("height", height)
         .attr("id", "cluster" + index);
-  // addContextMenu(svg); 
+  // addContextMenu(svg);
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
