@@ -120,17 +120,19 @@ function map(list, field) {
 }
 // ************************************************************************ //
 
-function applyNoise(data, columns, ncol) {
+function applyNoise(data, columns, ncol, origin) {
   let step = 1e-2;
 
   let aData = Object.assign({}, data);
   delete aData["columns"];
   let indexes = [];
+  let originSteps = {};
   for(let j = 0; j < ncol; j++) {
     let feat = columns[j];
     let values = unique(aData, feat);
     let max = d3.max(values);
     let min = d3.min(values);
+
     let range = max == min ? 1 + max/15 : max - min;
     for(let value of values) {
       let iValues = getIndexes(aData, feat, value);
@@ -143,15 +145,20 @@ function applyNoise(data, columns, ncol) {
       }
 
       let steps = [];
-
       for(let i = 0; i < indexes.length; i++) {
         steps[i] = step * range * i - step * range * indexes.length/2;
         aData[indexes[i]][feat] = +aData[indexes[i]][feat] + steps[i];
       }
+      // console.log(feat, value, origin[feat]);
+      if(value == origin[feat]) {
+        originSteps[feat] = [-step * range * indexes.length/2,
+                  step * range * indexes.length/2];
+      }
     }
   }
 
-  return Object.values(aData);
+  return {data: Object.values(aData),
+            steps: originSteps};
 }
 
 
@@ -170,7 +177,9 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     origin[field] = d3.map(data, d => d[field])[0];
   }
 
-  let df = applyNoise(filterCluster(data, cluster), columns, ncol);
+  let noiseData = applyNoise(filterCluster(data, cluster), columns, ncol, origin);
+  let df = noiseData.data;
+  let steps = noiseData.steps;
   // let noiseFree = filterCluster(data, cluster);
   // console.log(df);
   // df = debug(df, columns, ncol);
@@ -214,7 +223,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     fields[field]["origin"] = origin[field];
     // console.log(nf);
     let mid = (margin.left + width - margin.right)/2;
-    let range = fdir == 1 ? [mid, width - margin.right] : [margin.left, mid + 3];
+    let range = fdir == 1 ? [mid, width - margin.right] : [margin.left, mid];
     if(d3.min(nf[field]) == d3.max(nf[field])) {
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min - (max/15 + 1), max + (max/15 + 1)])
@@ -247,9 +256,20 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
               .tickSizeInner(0)
               .tickSizeOuter(0)
 
+      // console.log(field, steps[field]);
+      if(steps[field]) {
+        console.assert(origin[field]);
+        let s = temp;
+        let inc = +origin[field] - fdir * steps[field][1];
+        inc = Math.abs(s(inc) - s(+origin[field]));
+        fdir == 1 ? range[0] = range[0] - inc/2 : range[1] = range[1] + inc/2;
+      }
+
+      // console.log(range, mid, fdir);
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min, max])
               .range(range);
+
 
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])

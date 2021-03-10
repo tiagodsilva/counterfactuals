@@ -49,7 +49,7 @@ function randomNoise(l, r) {
   return Math.random() * (xr - xl) + xl
 }
 
-function sortParallel(indexes, index, df, columns, fdir) {
+function sortParallel(indexes, index, df, columns) {
   // console.log(indexes);
   if(indexes.length == 1 || index == columns.length) {
     // if(indexes.length != 1) {console.log(indexes)};
@@ -61,9 +61,9 @@ function sortParallel(indexes, index, df, columns, fdir) {
   let xs = filter(df, indexes); // get the indexes
 
   let returnIndexes = [];
-  for(let value of sorted(unique(xs, feat), fdir[feat])) {
+  for(let value of sorted(unique(xs, feat))) {
     // we need the indexes of `value` in xs
-    var a = sortParallel(getIndexes(xs, feat, value), index + 1, df, columns, fdir);
+    var a = sortParallel(getIndexes(xs, feat, value), index + 1, df, columns);
     // console.log("a", a);
     returnIndexes = returnIndexes.concat(a);
     // console.log("b", returnIndexes);
@@ -120,7 +120,7 @@ function map(list, field) {
 }
 // ************************************************************************ //
 
-function applyNoise(data, columns, ncol, fdir) {
+function applyNoise(data, columns, ncol) {
   let step = 1e-2;
 
   let aData = Object.assign({}, data);
@@ -135,10 +135,10 @@ function applyNoise(data, columns, ncol, fdir) {
     for(let value of values) {
       let iValues = getIndexes(aData, feat, value);
       if(j == 0) {
-        indexes = sortParallel(iValues, j + 1, aData, columns, fdir);
+        indexes = sortParallel(iValues, j + 1, aData, columns);
         // sortp(iValues, j + 1, aData, columns);
       } else {
-        indexes = sortParallel(iValues, j - 1, aData, columns, fdir);
+        indexes = sortParallel(iValues, j - 1, aData, columns);
         // sortp(iValues, j + 1, aData, columns);
       }
 
@@ -146,7 +146,7 @@ function applyNoise(data, columns, ncol, fdir) {
 
       for(let i = 0; i < indexes.length; i++) {
         steps[i] = step * range * i - step * range * indexes.length/2;
-        aData[indexes[i]][feat] = +aData[indexes[i]][feat] + fdir[feat] * steps[i];
+        aData[indexes[i]][feat] = +aData[indexes[i]][feat] + steps[i];
       }
     }
   }
@@ -163,7 +163,14 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   for(let field of columns) {
     nf[field] = d3.map(noiseFree, d => d[field]);
   }
-  let df = applyNoise(filterCluster(data, cluster), columns, ncol, featureDirections);
+
+  let origin = {};
+
+  for(let field of columns) {
+    origin[field] = d3.map(data, d => d[field])[0];
+  }
+
+  let df = applyNoise(filterCluster(data, cluster), columns, ncol);
   // let noiseFree = filterCluster(data, cluster);
   // console.log(df);
   // df = debug(df, columns, ncol);
@@ -187,45 +194,82 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     // this field
     var vShift = margin.top + yScale(field) - yScale.bandwidth()/2;
     var hShift = 5
-    fields[field]["group"] = axisGroup.append("g")
+    fields[field]["dummyGroup"] = axisGroup.append("g")
             .attr("id", "axis" + field)
             .attr("transform",
                 "translate(" + hShift + "," + vShift + ")");
 
+    fields[field]["group"] = axisGroup.append("g")
+            .attr("id", "axis" + field)
+            .attr("transform",
+                  "translate(" + hShift + "," + vShift + ")");
+
     // add the axis (check feature direction)
-    let min = fdir == 1 ? d3.min(dfField) : d3.max(dfField);
-    let max = fdir == 1 ? d3.max(dfField) : d3.min(dfField);
+    let min = d3.min(dfField);
+    let max = d3.max(dfField);
 
     fields[field]["fdir"] = fdir;
     // I am using a random nosie; however,
     // the visual was a kinda of strange
-
+    fields[field]["origin"] = origin[field];
     // console.log(nf);
+    let mid = (margin.left + width - margin.right)/2;
+    let range = fdir == 1 ? [mid, width - margin.right] : [margin.left, mid + 3];
     if(d3.min(nf[field]) == d3.max(nf[field])) {
       fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max + (max/15 + 1) * fdir])
+              .domain([min - (max/15 + 1), max + (max/15 + 1)])
               .range([margin.left, width - margin.right]);
 
-      fields[field]["axis"] = d3.axisBottom()
+      // let midScale = fields[field]["scale"].invert(mid);
+      fields[field]["dummyAxis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
               .ticks(2)
+              .tickSizeInner(0)
               .tickSizeOuter(0)
               .tickFormat(x => Math.floor(x * 1000)/1000)
               .tickValues([max]);
-    } else {
-      fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max])
-              .range([margin.left, width - margin.right]);
 
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
-              .ticks(2)
+              // .ticks(2)
               .tickSizeOuter(0)
+              .tickFormat(x => Math.floor(x * 1000)/1000)
+              .tickValues([max]);
+
+    } else {
+      let temp = d3.scaleLinear()
+              .domain([min, max])
+              .range([margin.left, width - margin.right]);
+
+      fields[field]["dummyAxis"] = d3.axisBottom()
+              .scale(temp)
+              .ticks(2)
+              .tickSizeInner(0)
+              .tickSizeOuter(0)
+
+      fields[field]["scale"] = d3.scaleLinear()
+              .domain([min, max])
+              .range(range);
+
+      fields[field]["axis"] = d3.axisBottom()
+              .scale(fields[field]["scale"])
+              .ticks(1)
+              .tickSizeOuter(0);
           }
 
-    fields[field]["group"].call(fields[field]["axis"])
+    fields[field]["dummyGroup"].call(fields[field]["dummyAxis"])
         .call(g => g.select(".domain"))
-        .call(g => g.attr("font-size", 8));
+        .call(g => g.attr("font-size", 1e-15));
+        // .call(g => g.attr("stroke", fdir == 1 ? "green" : "red")
+              // .attr("stroke-width", d3.min(nf[field]) == d3.max(nf[field]) ? 4 : 1));
+
+  // with the centralized origin, we need two axis:
+  // one with the line itself and other with
+  // the ticks (the marks!).
+
+    fields[field]["group"].call(fields[field]["axis"])
+            .call(g => g.select(".domain").attr("stroke", "transparent"))
+            .call(g => g.attr("font-size", 9));
   }
 
   return fields;
@@ -271,6 +315,8 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
           .attr("id", "mouseOverArea")
           .attr("transform", "translate(" + hShift + "," + margin.top + ")");
 
+  let mid = (width - margin.right + margin.left)/2;
+
   for(let i = 0; i < ncol - 1; i ++) {
     // we will draw the lines here
     var previousField = columns[i];
@@ -297,6 +343,7 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
         .attr("x1", (d, j) => {
           let scale = fields[previousField]["scale"];
           let self = fields[previousField]["df"][j];
+          let fdir = fields[previousField]["fdir"];
           return scale(self);
         })
         .attr("y1", yScale(previousField) - yScale.bandwidth()/2)
@@ -305,6 +352,7 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
             let previousData = fields[previousField]["df"];
             let self = data[j];
             let scale = fields[nextField]["scale"];
+            let fdir = fields[nextField]["fdir"];
             return scale(self);
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
@@ -433,7 +481,7 @@ function newCluster(data, columns, ncol, cluster, index) {
         .attr("width", width)
         .attr("height", height)
         .attr("id", "cluster" + index);
-  // addContextMenu(svg);
+  // addContextMenu(svg); 
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
