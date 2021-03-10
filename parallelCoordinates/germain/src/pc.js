@@ -120,7 +120,7 @@ function map(list, field) {
 }
 // ************************************************************************ //
 
-function applyNoise(data, columns, ncol, fdir) {
+function debug(data, columns, ncol, fdir) {
   let step = 1e-2;
 
   let aData = Object.assign({}, data);
@@ -163,7 +163,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   for(let field of columns) {
     nf[field] = d3.map(noiseFree, d => d[field]);
   }
-  let df = applyNoise(filterCluster(data, cluster), columns, ncol, featureDirections);
+  let df = debug(filterCluster(data, cluster), columns, ncol, featureDirections);
   // let noiseFree = filterCluster(data, cluster);
   // console.log(df);
   // df = debug(df, columns, ncol);
@@ -433,7 +433,7 @@ function newCluster(data, columns, ncol, cluster, index) {
         .attr("width", width)
         .attr("height", height)
         .attr("id", "cluster" + index);
-  // addContextMenu(svg);
+  addContextMenu(svg);
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);
@@ -445,29 +445,9 @@ let margin = {top: 25, bottom: 25, left: 9, right: 17};
 let height = 599;
 let width = 113;
 
-d3.csv("df_full.csv").then(function(data) {
+/*
+d3.csv("data/df_full.csv").then(function(data) {
   // read the data
-
-  let clusters = sorted(d3.map(data, d => d.Clusters), 1);
-  clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
-  let counterfactuals = [];
-
-  for(let cluster of clusters) {
-    counterfactuals.push(
-      d3.map(
-        d3.filter(data, d => d.Clusters == cluster),
-        d => d[""]
-      )
-    );
-  }
-
-  let columns = Object.keys(data[0]).filter((v, i, s) => v != "Clusters"
-          && v != "");
-  let ncol = columns.length;
-  drawAxis(data);
-
-  for(let i = 0; i < counterfactuals.length; i++) {
-    newCluster(data, columns, ncol, counterfactuals[i], i);
-  }
-  // console.log(counterfactuals);
+  drawAllClusters(data);
 });
+*/
