@@ -1,6 +1,22 @@
 import * as d3 from "d3";
 function filterCluster(data, cluster) {
-  return d3.filter(data, d => cluster.includes(d["counterfactuals"]));
+  // console.log(data, cluster);
+  return d3.filter(data, d => cluster.includes(d[""]));
+}
+
+function clone(data, columns) {
+  let dummy = [];
+  for(let i = 0; i < data.length; i++) {
+    dummy[i] = {};
+    dummy[i][""] = data[i][""];
+    for(let field of columns) {
+      // console.log(data[i], data[i][field], field);
+      let v = data[i][field];
+      // v = data[i][field];
+      dummy[i][field] = v;
+    }
+  }
+  return dummy;
 }
 
 function parseNumbers(arr) {
@@ -172,15 +188,15 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   for(let field of columns) {
     nf[field] = d3.map(noiseFree, d => d[field]);
   }
-
+  // console.log(nf);
   let origin = {};
 
   for(let field of columns) {
     origin[field] = d3.map(data, d => d[field])[0];
   }
-
-  let noiseData = applyNoise(filterCluster(data, cluster), columns, ncol, origin);
-  // console.log(filterCluster(data, cluster), columns, ncol, origin);
+  let dummyData = clone(data, columns);
+  // console.log(dummyData);
+  let noiseData = applyNoise(filterCluster(dummyData, cluster), columns, ncol, origin);
   let df = noiseData.data;
   let steps = noiseData.steps;
   // let noiseFree = filterCluster(data, cluster);
@@ -189,7 +205,6 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   // console.log(df);
   // let ncol = columns.length - 1;
   let axisGroup = d3.select("#cluster" + clusterIndex + "Axis");
-  // console.log(columns, ncol);
   for(let i = 0; i < ncol; i++) {
     let field = columns[i];
     let dfField = parseNumbers(d3.map(df, d => d[field]));
@@ -262,8 +277,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
 
       // console.log(field, steps[field]);
       if(steps[field]) {
-        // console.log(origin, field); 
-        console.assert(origin[field]);
+        // console.assert(origin[field]);
         let s = temp;
         let inc = +origin[field] - fdir * steps[field][1];
         inc = Math.abs(s(inc) - s(+origin[field]));
@@ -329,7 +343,7 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
 
   let df = filterCluster(data, cluster);
   // let ncol = columns.length - 1;
-  let counterfactuals = d3.map(df, d => d["counterfactuals"]);
+  let counterfactuals = d3.map(df, d => d[""]);
 
   // we draw the lines
   let svgLines = svg.append("g")
@@ -474,7 +488,7 @@ function addContextMenu(svg) {
 
       window.clusters[i - 1] = window.clusters[i];
 		}
-    clusters.pop(window.clusters.length - 1);
+    window.clusters.pop(window.clusters.length - 1);
 		// now, we can remove this svg
 		d3.select(self).remove();
 
@@ -484,7 +498,7 @@ function addContextMenu(svg) {
 export function drawAxis(data) {
   setGroups("#vis", data);
   let columns = Object.keys(data[0]);
-  columns = columns.filter(d => d != "Clusters" && d != "" && d != "counterfactuals");
+  columns = columns.filter(d => d != "Clusters" && d != "");
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);

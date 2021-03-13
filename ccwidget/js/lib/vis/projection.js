@@ -119,15 +119,15 @@ function DrawPointGroups(divID,divLabel,dataset, data){
 
         if(selectedDots.length > 0) {
           window.clusters.push(selectedDots);
-          // console.log(clusters)
+          console.log(window.clusters)
           //Thiago
 
           let columns = Object.keys(data[0]);
-          columns = columns.filter(d => d != "Clusters" && d != "" && d != "counterfactuals");
+          columns = columns.filter(d => d != "Clusters" && d != "");
           let ncol = columns.length;
-          
-          newCluster(data, columns, ncol, clusters[clusters.length - 1],
-                  clusters.length - 1);
+
+          newCluster(data, columns, ncol, window.clusters[window.clusters.length - 1],
+                  window.clusters.length - 1);
         }
 
     };
