@@ -37,7 +37,7 @@
                     t = event.sourceEvent.touches[0].clientX, n = event.sourceEvent.touches[0].clientY;
                 }else{
                     t = event.sourceEvent.clientX, n = event.sourceEvent.clientY;
-                    
+
                 }
                // "touchmove" === event.sourceEvent.type ? (t = event.sourceEvent.touches[0].clientX, n = event.sourceEvent.touches[0].clientY) : (t = event.sourceEvent.clientX, n = event.sourceEvent.clientY);
                 var s = event.x,
