@@ -1,18 +1,21 @@
 import drawStar from "./star.js";
+const d3 = require("d3");
+d3.lasso = require("./lasso").lasso;
+import { drawAxis, newCluster } from "./pc.js";
 const colors = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477", "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc", "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
-CLASES ={};
-DICTIONARY ={};
+var CLASES ={};
+var DICTIONARY ={};
 var stars = [];
 var CORRESPONDIENTES = [];
-sizes = {'CFR':6,'Orig':10,'CFROrig':8,'CFS':6};
+var sizes = {'CFR':6,'Orig':10,'CFROrig':8,'CFS':6};
 var clusters = [];
 var counter = 0;
 
-function DrawPointGroups(divID,divLabel,dataset){
+function DrawPointGroups(divID,divLabel,dataset, data){
     d3.select("#"+divID).selectAll("svg").remove();
     d3.select("#"+divLabel).selectAll("svg").remove();
-    divHeight = document.getElementById(divID).clientHeight;
-    divWidth  = document.getElementById(divID).clientWidth;
+    let divHeight = document.getElementById(divID).clientHeight;
+    let divWidth  = document.getElementById(divID).clientWidth;
 
     var marginMain = {top: 20, right: 20, bottom: 20, left: 20};
     var width = divWidth -marginMain.right - marginMain.left;
@@ -45,15 +48,16 @@ function DrawPointGroups(divID,divLabel,dataset){
 
     //       AXIS  AND SCALE      //
     //xmar = d3.extent(dataset, function(d) { return d.x; });
-    xmar = d3.extent(dataset, d=> d.x);
-    ymar  = d3.extent(dataset,d=> d.y);
+    let xmar = d3.extent(dataset, d=> d.x);
+    let ymar  = d3.extent(dataset,d=> d.y);
     var xScale = d3.scaleLinear().domain(xmar).range([ 0, width]);
     var yScale = d3.scaleLinear().domain(ymar).range([ height, 0]);
 
 
     // Axis for the parallel coordinates
 
-    d3.csv("data/cfa.csv").then(function(data) {drawAxis(data)});
+    drawAxis(data);
+    // d3.csv("data/cfa.csv").then(function(data) {drawAxis(data)});
 
     var svgCircle =svgGroupScatter.append('g')
     var circles = svgCircle.selectAll("dot")
@@ -118,18 +122,16 @@ function DrawPointGroups(divID,divLabel,dataset){
           // console.log(clusters)
           //Thiago
 
-          d3.csv("data/cfa.csv").then(function(data) {
+          let columns = Object.keys(data[0]);
+          columns = columns.filter(d => d != "Clusters" && d != "" && !d.includes("Unnamed"));
+          let ncol = columns.length;
 
-            let columns = Object.keys(data[0]);
-            columns = columns.filter(d => d != "Clusters" && d != "");
-            let ncol = columns.length;
-
-            newCluster(data, columns, ncol, clusters[clusters.length - 1],
-                    clusters.length - 1);
-          });
+          newCluster(data, columns, ncol, clusters[clusters.length - 1],
+                  clusters.length - 1);
         }
 
     };
+
 
     var lasso = d3.lasso()
             .closePathSelect(true)
@@ -143,6 +145,7 @@ function DrawPointGroups(divID,divLabel,dataset){
 
 
     svg.call(lasso);
+
     /************************ end lasso select *******************************/
     /************************* LASSO ***************************************** */
     /************************* LEGEND***************************************** */
@@ -163,7 +166,7 @@ function DrawPointGroups(divID,divLabel,dataset){
         .attr("width", width_label)
         .attr("height",height_label)
 
-    Scatterlegend_SVG = Scatterlegend.append('g')
+    let Scatterlegend_SVG = Scatterlegend.append('g')
         .append("g")
         .attr("width", svg_width_label)
         .attr("height", svg_height_label)
@@ -211,26 +214,18 @@ function DrawPointGroups(divID,divLabel,dataset){
             .attr("y2", function(d) {return yScale(d3.select("#"+d['2']).data()[0].y);}); */
 }
 
-Read_CFS2CFR();
-function Read_CFS2CFR(){
-    d3.csv("data/CFS2CFR_355030804000048.csv")
-    .then((data) => {
-        CORRESPONDIENTES = data;
-    });
-    //projStars(stars);
-}
+export function DrawProjection(correspondents,
+        projection, dist, cfa) {
 
-function DrawProjection(correspondents,
-        projection, dist) {
-
+  CORRESPONDIENTES = correspondents;
   projection.forEach(function(d){
       d.clase = d['id'].replace(/[0-9]/g, '');
       d.x = parseFloat(d.x);
       d.y = parseFloat(d.y);
   });
-  var tempArray = Array.from(d3.group(data,function(g){return g.clase}));
+  var tempArray = Array.from(d3.group(projection,function(g){return g.clase}));
   tempArray.forEach(function(d){ CLASES[d[0]] = {'count':d[1].length}; });
-  DrawPointGroups('First_ScatterPlot','Second_ScatterPlot',projection);
+  DrawPointGroups('First_ScatterPlot','Second_ScatterPlot',projection, cfa);
 
   dist.forEach(function(d){
       Object.keys(d).forEach(function(key) {
@@ -255,5 +250,5 @@ function GetAtrrayStar(d){
          stars.push({'i':i,'length':length2,'name':d['2']});
         // }
      });
-     drawStar("bubleChart");
+     // drawStar("bubleChart");
 }

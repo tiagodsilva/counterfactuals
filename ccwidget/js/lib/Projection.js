@@ -1,6 +1,7 @@
 import * as widgets from '@jupyter-widgets/base';
 import setCSS from "./html/setCSS.js";
 import setDivs from "./html/setDivs.js";
+import { DrawProjection } from "./vis/projection.js";
 var _ = require('lodash');
 
 // When serialiazing the entire widget state for embedding, only values that
@@ -27,7 +28,16 @@ var ProjectionView = widgets.DOMWidgetView.extend({
         let filepath = this.model.get("filepath");
         setCSS(this.el);
         setDivs(this.el);
-        this.el.classList.add("cfWidget"); 
+        this.el.classList.add("cfWidget");
+
+        let correspondents = this.model.get("cfr_cfs");
+        let projection = this.model.get("projection");
+        let dist = this.model.get("dist");
+        let cfa = this.model.get("cfa");
+        // console.log(correspondents);
+        setTimeout(() => {
+          DrawProjection(correspondents, projection, dist, cfa)
+        }, 225);
         // Observe changes in the value traitlet in Python, and define
         // a custom callback.
         this.model.on('change:value', this.value_changed, this);

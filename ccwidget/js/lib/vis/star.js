@@ -1,3 +1,4 @@
+import * as d3 from "d3"; 
 export default function drawStar(divID){
    d3.select("#"+divID).selectAll("svg").remove();
    size  = document.getElementById(divID).clientWidth;
