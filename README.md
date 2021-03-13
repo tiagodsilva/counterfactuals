@@ -6,5 +6,5 @@ cd ccwidget
 pip install -e . 
 source build.sh 
 ``` 
-Then, load the appropriate data and execute it as the GIF shows. 
+Then, load the appropriate data and execute the commands shown in the GIF. 
 ![](imgs/widget.gif) 
