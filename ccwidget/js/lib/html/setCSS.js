@@ -25,7 +25,7 @@ export default function setCSS(el) {
 	    box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
 	}
 
-	.cfWidget {
+	.cfWidget { 
 		height:725px;
 	}
 

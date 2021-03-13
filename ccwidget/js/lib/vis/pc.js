@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 function filterCluster(data, cluster) {
-  return d3.filter(data, d => cluster.includes(d[""]));
+  return d3.filter(data, d => cluster.includes(d["counterfactuals"]));
 }
 
 function parseNumbers(arr) {
@@ -180,6 +180,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   }
 
   let noiseData = applyNoise(filterCluster(data, cluster), columns, ncol, origin);
+  // console.log(filterCluster(data, cluster), columns, ncol, origin);
   let df = noiseData.data;
   let steps = noiseData.steps;
   // let noiseFree = filterCluster(data, cluster);
@@ -188,6 +189,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   // console.log(df);
   // let ncol = columns.length - 1;
   let axisGroup = d3.select("#cluster" + clusterIndex + "Axis");
+  // console.log(columns, ncol);
   for(let i = 0; i < ncol; i++) {
     let field = columns[i];
     let dfField = parseNumbers(d3.map(df, d => d[field]));
@@ -260,6 +262,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
 
       // console.log(field, steps[field]);
       if(steps[field]) {
+        // console.log(origin, field); 
         console.assert(origin[field]);
         let s = temp;
         let inc = +origin[field] - fdir * steps[field][1];
@@ -326,7 +329,7 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
 
   let df = filterCluster(data, cluster);
   // let ncol = columns.length - 1;
-  let counterfactuals = d3.map(df, d => d[""]);
+  let counterfactuals = d3.map(df, d => d["counterfactuals"]);
 
   // we draw the lines
   let svgLines = svg.append("g")
@@ -469,9 +472,9 @@ function addContextMenu(svg) {
 			d3.select("#cluster" + i)
 				.attr("id", "cluster" + (i - 1));
 
-      clusters[i - 1] = clusters[i];
+      window.clusters[i - 1] = window.clusters[i];
 		}
-    clusters.pop(clusters.length - 1);
+    clusters.pop(window.clusters.length - 1);
 		// now, we can remove this svg
 		d3.select(self).remove();
 
@@ -481,7 +484,7 @@ function addContextMenu(svg) {
 export function drawAxis(data) {
   setGroups("#vis", data);
   let columns = Object.keys(data[0]);
-  columns = columns.filter(d => d != "Clusters" && d != "" && !d.includes("Unnamed"));
+  columns = columns.filter(d => d != "Clusters" && d != "" && d != "counterfactuals");
   let yScale = d3.scaleBand()
           .domain(columns)
           .range([margin.top, height - margin.bottom]);

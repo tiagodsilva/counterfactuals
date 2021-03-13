@@ -8,7 +8,7 @@ var DICTIONARY ={};
 var stars = [];
 var CORRESPONDIENTES = [];
 var sizes = {'CFR':6,'Orig':10,'CFROrig':8,'CFS':6};
-var clusters = [];
+window.clusters = [];
 var counter = 0;
 
 function DrawPointGroups(divID,divLabel,dataset, data){
@@ -118,14 +118,14 @@ function DrawPointGroups(divID,divLabel,dataset, data){
         var selectedDots  = lasso.selectedItems()._groups[0].map(d=>d.id);
 
         if(selectedDots.length > 0) {
-          clusters.push(selectedDots);
+          window.clusters.push(selectedDots);
           // console.log(clusters)
           //Thiago
 
           let columns = Object.keys(data[0]);
-          columns = columns.filter(d => d != "Clusters" && d != "" && !d.includes("Unnamed"));
+          columns = columns.filter(d => d != "Clusters" && d != "" && d != "counterfactuals");
           let ncol = columns.length;
-
+          
           newCluster(data, columns, ncol, clusters[clusters.length - 1],
                   clusters.length - 1);
         }
