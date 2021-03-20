@@ -38,7 +38,7 @@ function translation(currStep, nextStep, height) {
     dy = dy + (affine ? affine["f"] : 0);
     d3.select(svg)
         .transition()
-        .duration(459) 
+        .duration(459)
         .attr("transform", "translate(0, " + dy + ")");
   }
 }
@@ -183,4 +183,4 @@ setTimeout(() => {
           .attr("id", "main");
 
   drawStep(0);
-}, 225);
+}, 1999);
