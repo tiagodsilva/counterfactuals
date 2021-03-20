@@ -83,7 +83,7 @@ function transition(svgs, height, width) {
 	for(let i = 0; i < rand.length; i++) {
 		let svg = svgs["a" + (i + 1)].svg;
 		svg.transition()
-			.duration(459)  
+			.duration(459)
 			.attr("transform", "translate(0, " + transitions[i] + ")");
 	}
 }

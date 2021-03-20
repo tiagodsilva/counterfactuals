@@ -1,4 +1,4 @@
-  function filterCluster(data, cluster) {
+function filterCluster(data, cluster) {
   return d3.filter(data, d => cluster.includes(d[""]));
 }
 
