@@ -4,6 +4,30 @@ const features = ["BusStops", "ExpansionPhase", "Favelas", "FontainArea",
         "Schools", "SewageCollection", "TravelingTime", "Verticalization", "WaterSupply",
         "WomanHouseHolder", "YoungManRate", "Bars"];
 
+const fdir = {
+  "Passengers": -1,
+  "TravelingTime": 1,
+  "HighRiskAreas": 1,
+  "FontainArea": 1,
+  "ExpansionPhase": 1,
+  "Population": -1,
+  "Favelas": 1,
+  "WaterSupply": 1,
+  "HighIncomeHolder": 1,
+  "LiterateHouseHolder": 1,
+  "WomanHouseHolder": 1,
+  "PopulationDensity": 1,
+  "ImprovisedHousing": -1,
+  "PermanentHousing": 1,
+  "SewageCollection": 1,
+  "GarbageCollection": 1,
+  "YoungManRate": 1,
+  "Verticalization": -1,
+  "Bars": -1,
+  "Schools": -1,
+  "BusStops": -1
+};
+
 const dataPath = "../projection/data/recFiltering/";
 const nFeatures = features.length;
 const nSteps = 3;
@@ -11,18 +35,22 @@ const height = 59;
 const width = 259;
 const margin = {left: 35, bottom: 16, right: 15, top: 14};
 
-let temp = [];
-for(let i = 0; i < nSteps; i++) {
-  temp[i] = {};
-  for(let feat of features) {
-    const file = dataPath + "Step" + i + "/" + feat + ".csv";
-    d3.csv(file).then(data => temp[i][feat] = data);
+function readData() {
+  let temp = {};
+  for(let i = 0; i < nSteps; i++) {
+    temp[i] = {};
+    for(let feat of features) {
+      const file = dataPath + "Step" + i + "/" + feat + ".csv";
+      d3.csv(file).then(data => temp[i][feat] = data);
+    }
+    const file = dataPath + "Step" + i + "/order.csv";
+    d3.csv(file).then(data => temp[i]["order"] = data);
   }
-  const file = dataPath + "Step" + i + "/order.csv";
-  d3.csv(file).then(data => temp[i]["order"] = data);
+
+  return temp;
 }
 
-const dataset = temp;
+const dataset = readData();
 
 function translation(currStep, nextStep, height) {
   let svg = document.getElementById("main");
@@ -69,8 +97,13 @@ class LinePath {
     self.divID = divID;
     let x = d3.map(self.data, d => d[""]);
     let y = d3.map(self.data, d => d["1"]);
+
+    const dir = fdir[feat];
+    // console.log(fdir);
+
     self.xScale = d3.scaleLinear()
-            .domain([d3.min(x), d3.max(x)])
+            .domain([dir == 1 ? d3.min(x) : d3.max(x),
+                      dir == 1 ? d3.max(x) : d3.min(x)])
             .range([margin.left + 9.5, width - margin.right - 9.5]);
 
     self.yScale = d3.scaleLinear()
@@ -78,12 +111,17 @@ class LinePath {
             .range([height - margin.bottom - 2, margin.top + 2])
             .nice();
 
+    const round = function(x, feat) {
+      return feat == "ImprovisedHousing" ? Math.floor(1000 * x)/1000 :
+              Math.floor(100 * x)/100;
+    }
     self.xAxis = d3.axisBottom()
             .scale(self.xScale)
             .ticks(3)
             .tickSizeOuter(1e-15)
             .tickSizeInner(3)
-            .tickValues(d3.map(self.data, d => d[""]));
+            .tickValues(d3.map(self.data, d => d[""]))
+            .tickFormat(x => round(x, self.feat));
 
     self.yAxis = d3.axisLeft()
             .scale(self.yScale)
