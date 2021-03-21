@@ -11,22 +11,24 @@ const height = 49;
 const width = 159;
 const margin = {left: 35, bottom: 16, right: 15, top: 14};
 
-// get data
 let temp = [];
-
 for(let i = 0; i < nSteps; i++) {
-  d3.csv(dataPath + "Step" + i + "/" + "order.csv").then(data => {
-    temp[i] = data;
-  })
+  temp[i] = {};
+  for(let feat of features) {
+    const file = dataPath + "Step" + i + "/" + feat + ".csv";
+    d3.csv(file).then(data => temp[i][feat] = data);
+  }
+  const file = dataPath + "Step" + i + "/order.csv";
+  d3.csv(file).then(data => temp[i]["order"] = data);
 }
 
-const orders = temp;
+const dataset = temp;
 
 function translation(currStep, nextStep, height) {
   let svg = document.getElementById("main");
   let svgs = svg.getElementsByClassName("lineChart");
-  let curr = orders[currStep];
-  let next = orders[nextStep];
+  let curr = dataset[currStep]["order"];
+  let next = dataset[nextStep]["order"];
   // console.log(svgs.length);
   for(let svg of svgs) {
     let feat = svg.id;
@@ -45,13 +47,14 @@ function translation(currStep, nextStep, height) {
 
 function changeStep(step) {
   d3.selectAll("g").attr("step", step);
-  const file = dataPath + "Step" + step + "/";
+  const filePath = dataPath + "Step" + step + "/";
   for(let feat of features) {
-    d3.csv(file + feat + ".csv").then(data => {
-      data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
-      let linePath = new LinePath(data, "vis", feat, null)
-      let path = linePath.update();
-    })
+    let data = dataset[step][feat];
+    data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
+    if(feat == "Bars") console.log(step, data);
+    let linePath = new LinePath(data, "vis", feat, null)
+    let path = linePath.update();
+    linePath.axis();
   }
 }
 
@@ -73,6 +76,19 @@ class LinePath {
     self.yScale = d3.scaleLinear()
             .domain([d3.min(y), d3.max(y)])
             .range([height - margin.bottom, margin.top]);
+
+    self.xAxis = d3.axisBottom()
+            .scale(self.xScale)
+            .ticks(3)
+            .tickSizeOuter(1e-15)
+            .tickSizeInner(3);
+
+    self.yAxis = d3.axisLeft()
+            .scale(self.yScale)
+            .ticks(2)
+            .tickSizeOuter(1e-15)
+            .tickSizeInner(3);
+
     self.mapped = [];
     self. data.forEach((d, i) => {
       self.mapped[i] = {};
@@ -123,32 +139,20 @@ class LinePath {
 
   axis() {
     const self = this;
-    let xAxisGroup = self.svg
+    let xAxisGroup = d3.select("#" + self.feat)
             .append("g")
             .attr("id", "xAxis" + self.feat + "group")
             .attr("transform", "translate(0," + (height - margin.bottom) + ")");
 
-    let xAxis = d3.axisBottom()
-            .scale(self.xScale)
-            .ticks(3)
-            .tickSizeOuter(1e-15)
-            .tickSizeInner(3);
-
-    xAxisGroup.call(xAxis)
+    xAxisGroup.call(self.xAxis)
               .call(g => g.selectAll("text").attr("font-size", 14/2));
 
-    let yAxisGroup = self.svg
+    let yAxisGroup = d3.select("#" + self.feat) 
             .append("g")
-            .attr("id", "xAxis" + self.feat + "group")
+            .attr("id", "yAxis" + self.feat + "group")
             .attr("transform", "translate(" + margin.left + ",0)");
 
-    let yAxis = d3.axisLeft()
-            .scale(self.yScale)
-            .ticks(2)
-            .tickSizeOuter(1e-15)
-            .tickSizeInner(3);
-
-    yAxisGroup.call(yAxis)
+    yAxisGroup.call(self.yAxis)
             .call(g => g.selectAll("text").attr("font-size", 14/2));
   }
 
@@ -175,9 +179,16 @@ class LinePath {
     for(let i = 1; i < self.mapped.length; i++) {
       path = path + "L " + self.mapped[i][""] + " " + self.mapped[i]["1"] + " ";
     }
-    d3.select("#path" + self.feat)
+
+    self.svg = d3.select("#path" + self.feat);
+    self.svg
             .transition()
             .attr("d", path);
+
+    let xAxis = document.getElementById("xAxis" + self.feat + "group");
+    let yAxis = document.getElementById("yAxis" + self.feat + "group");
+    if(xAxis) d3.select(xAxis).remove();
+    if(yAxis) d3.select(yAxis).remove();
   }
 }
 
@@ -189,19 +200,18 @@ function drawStep(step) {
     // console.log(file);
     let feat = features[i];
     let order = {};
-    orders[step].forEach(d => order[d["0"]] = +d[""]);
+    dataset[step]["order"].forEach(d => order[d["0"]] = +d[""]);
 
-    d3.csv(file).then(data => {
-      // console.log(data);
-      // console.log(feat, order[feat], height * order[feat], features.length);
-      // parse numbers
-      data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
-      // console.log(data);
-      let lineChart = new LinePath(data, "main", feat, order[feat]);
-      lineChart.draw();
-      lineChart.axis();
-      lineChart.path();
-    })
+    let data = dataset[step][feat];
+    // console.log(data);
+    // console.log(feat, order[feat], height * order[feat], features.length);
+    // parse numbers
+    data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
+    // console.log(data);
+    let lineChart = new LinePath(data, "main", feat, order[feat]);
+    lineChart.draw();
+    lineChart.axis();
+    lineChart.path();
   }
 }
 
