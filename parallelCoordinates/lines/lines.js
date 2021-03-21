@@ -24,7 +24,7 @@ const orders = temp;
 
 function translation(currStep, nextStep, height) {
   let svg = document.getElementById("main");
-  let svgs = svg.getElementsByTagName("svg");
+  let svgs = svg.getElementsByClassName("lineChart");
   let curr = orders[currStep];
   let next = orders[nextStep];
   // console.log(svgs.length);
@@ -64,17 +64,18 @@ class LinePath {
     let dy = index * height;
 
     self.svg = d3.select("#" + divID)
-            .append("svg")
+            .append("g")
             .attr("id", feat)
+            .attr("class", "lineChart")
             .attr("height", height)
             .attr("width", width)
             .attr("step", 0)
-            .attr("y", dy)
+            .attr("transform", "translate(0, " + dy + ")")
             .on("click", function(event, d) {
               let curr = d3.select(this).attr("step");
               let next = (curr + 1) % 3;
               translation(curr, next, height);
-              d3.selectAll("svg").attr("step", next);
+              d3.selectAll("g").attr("step", next);
             });
 
     self.border = self.svg

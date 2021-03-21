@@ -32,12 +32,12 @@ class Draw {
 		const self = this;
 		self.id = id;
 		self.svg = self.container
-						.append("svg")
+						.append("g")
 						.attr("width", self.width)
 						.attr("height", self.height)
 						.attr("id", id)
-						.attr("x", x)
-						.attr("y", y)
+            .attr("transform", "translate(" + x + "," + y + ")") 
+            .style("background-color", color)
 						.attr("opacity", .5);
 
 		self.circle = self.svg
@@ -51,7 +51,8 @@ class Draw {
 						.attr("width", self.width)
 						.attr("height", self.height)
 						.attr("fill", "transparent")
-						.attr("stroke", "black");
+						.attr("stroke", color)
+            .attr("stroke-width", 4);
 	}
 
 	onClick(click, ...args) {
@@ -82,7 +83,8 @@ function transition(svgs, height, width) {
 
 	for(let i = 0; i < rand.length; i++) {
 		let svg = svgs["a" + (i + 1)].svg;
-		svg.transition()
+		svg.selectAll("*")
+      .transition()
 			.duration(459)
 			.attr("transform", "translate(0, " + transitions[i] + ")");
 	}
