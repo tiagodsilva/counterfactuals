@@ -1,6 +1,6 @@
 ,0
 Passengers,inf
-TravelingTime,inf
+TravelingTime,-inf
 HighRiskAreas,-inf
 FontainArea,-inf
 ExpansionPhase,-inf
@@ -13,7 +13,7 @@ WomanHouseHolder,-inf
 PopulationDensity,-inf
 ImprovisedHousing,inf
 PermanentHousing,-inf
-SewageCollection,inf
+SewageCollection,-inf
 GarbageCollection,-inf
 YoungManRate,-inf
 Verticalization,inf

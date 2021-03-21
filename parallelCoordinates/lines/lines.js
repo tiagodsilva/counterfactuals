@@ -45,10 +45,10 @@ function translation(currStep, nextStep, height) {
 
 function changeStep(step) {
   d3.selectAll("g").attr("step", step);
-
   const file = dataPath + "Step" + step + "/";
   for(let feat of features) {
     d3.csv(file + feat + ".csv").then(data => {
+      data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
       let linePath = new LinePath(data, "vis", feat, null)
       let path = linePath.update();
     })
@@ -73,7 +73,6 @@ class LinePath {
     self.yScale = d3.scaleLinear()
             .domain([d3.min(y), d3.max(y)])
             .range([height - margin.bottom, margin.top]);
-
     self.mapped = [];
     self. data.forEach((d, i) => {
       self.mapped[i] = {};
@@ -176,8 +175,8 @@ class LinePath {
     for(let i = 1; i < self.mapped.length; i++) {
       path = path + "L " + self.mapped[i][""] + " " + self.mapped[i]["1"] + " ";
     }
-
     d3.select("#path" + self.feat)
+            .transition()
             .attr("d", path);
   }
 }
