@@ -7,8 +7,8 @@ const features = ["BusStops", "ExpansionPhase", "Favelas", "FontainArea",
 const dataPath = "../projection/data/recFiltering/";
 const nFeatures = features.length;
 const nSteps = 3;
-const height = 49;
-const width = 159;
+const height = 59;
+const width = 259;
 const margin = {left: 35, bottom: 16, right: 15, top: 14};
 
 let temp = [];
@@ -71,17 +71,19 @@ class LinePath {
     let y = d3.map(self.data, d => d["1"]);
     self.xScale = d3.scaleLinear()
             .domain([d3.min(x), d3.max(x)])
-            .range([margin.left, width - margin.right]);
+            .range([margin.left + 9.5, width - margin.right - 9.5]);
 
     self.yScale = d3.scaleLinear()
-            .domain([d3.min(y), d3.max(y)])
-            .range([height - margin.bottom, margin.top]);
+            .domain([0, 1])
+            .range([height - margin.bottom - 2, margin.top + 2])
+            .nice();
 
     self.xAxis = d3.axisBottom()
             .scale(self.xScale)
             .ticks(3)
             .tickSizeOuter(1e-15)
-            .tickSizeInner(3);
+            .tickSizeInner(3)
+            .tickValues(d3.map(self.data, d => d[""]));
 
     self.yAxis = d3.axisLeft()
             .scale(self.yScale)
@@ -127,14 +129,6 @@ class LinePath {
             .attr("height", height - margin.bottom - margin.top)
             .attr("stroke", "black")
             .attr("fill", "transparent");
-
-    self.label = self.svg
-            .append("text")
-            .attr("x", margin.left)
-            .attr("y", margin.top - 1.9)
-            .attr("font-size", 9)
-            .attr("fill", "black")
-            .text(self.feat);
   }
 
   axis() {
@@ -147,7 +141,7 @@ class LinePath {
     xAxisGroup.call(self.xAxis)
               .call(g => g.selectAll("text").attr("font-size", 14/2));
 
-    let yAxisGroup = d3.select("#" + self.feat) 
+    let yAxisGroup = d3.select("#" + self.feat)
             .append("g")
             .attr("id", "yAxis" + self.feat + "group")
             .attr("transform", "translate(" + margin.left + ",0)");
@@ -166,13 +160,48 @@ class LinePath {
     self.svg
             .append("path")
             .attr("d", path)
-            .attr("stroke", "black")
+            .attr("stroke", "gray")
             .attr("stroke-width", 1.5)
             .attr("id", "path" + self.feat)
             .attr("fill", "none");
     return path;
   }
 
+  circles() {
+    const self = this;
+
+    self.svg
+      .selectAll("circle")
+      .data(self.data)
+      .join("circle")
+      .attr("cx", d => self.xScale(d[""]))
+      .attr("cy", d => self.yScale(d["1"]))
+      .attr("r", 1.5)
+      .attr("fill", "darkgray")
+      .attr("id", "circle" + self.feat);
+  }
+
+  label() {
+    const self = this;
+
+    const featLength = self.feat.length;
+    self.labelContainer = self.svg
+            .append("rect")
+            .attr("x", margin.left + 4)
+            .attr("y", margin.top + 2)
+            .attr("width", featLength * 4.9)
+            .attr("height", 9)
+            .attr("fill", "white");
+
+    self.label = self.svg
+            .append("text")
+            .attr("x", margin.left + 4)
+            .attr("y", margin.top + 9)
+            .attr("font-size", 9)
+            .attr("fill", "black")
+            .text(self.feat);
+
+  }
   update() {
     const self = this;
     let path = "M " + self.mapped[0][""] + " " + self.mapped[0]["1"] + " ";
@@ -183,7 +212,17 @@ class LinePath {
     self.svg = d3.select("#path" + self.feat);
     self.svg
             .transition()
+            .duration(459)
             .attr("d", path);
+
+    d3.select("#" + self.feat)
+            .selectAll("circle")
+            .data(self.data)
+            .join("circle")
+            .transition()
+            .duration(459)
+            .attr("cx", d => self.xScale(d[""]))
+            .attr("cy", d => self.yScale(d["1"]));
 
     let xAxis = document.getElementById("xAxis" + self.feat + "group");
     let yAxis = document.getElementById("yAxis" + self.feat + "group");
@@ -212,6 +251,8 @@ function drawStep(step) {
     lineChart.draw();
     lineChart.axis();
     lineChart.path();
+    lineChart.circles();
+    lineChart.label();
   }
 }
 
