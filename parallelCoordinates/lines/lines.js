@@ -43,6 +43,18 @@ function translation(currStep, nextStep, height) {
   }
 }
 
+function changeStep(step) {
+  d3.selectAll("g").attr("step", step);
+
+  const file = dataPath + "Step" + step + "/";
+  for(let feat of features) {
+    d3.csv(file + feat + ".csv").then(data => {
+      let linePath = new LinePath(data, "vis", feat, null)
+      let path = linePath.update();
+    })
+  }
+}
+
 class LinePath {
 
   constructor(data, divID, feat, index) {
@@ -51,6 +63,7 @@ class LinePath {
     self.data = data;
     self.feat = feat;
     self.index = index;
+    self.divID = divID;
     let x = d3.map(self.data, d => d[""]);
     let y = d3.map(self.data, d => d["1"]);
     self.xScale = d3.scaleLinear()
@@ -61,11 +74,24 @@ class LinePath {
             .domain([d3.min(y), d3.max(y)])
             .range([height - margin.bottom, margin.top]);
 
-    let dy = index * height;
+    self.mapped = [];
+    self. data.forEach((d, i) => {
+      self.mapped[i] = {};
+      // console.log(d, i);
+      self.mapped[i][""] = self.xScale(d[""]);
+      self.mapped[i]["1"] = self.yScale(d["1"]);
+    });
 
-    self.svg = d3.select("#" + divID)
+    self.mapped.sort((a, b) => a[""] - b[""]);
+    }
+
+  draw() {
+    const self = this;
+    let dy = self.index * height;
+
+    self.svg = d3.select("#" + self.divID)
             .append("g")
-            .attr("id", feat)
+            .attr("id", self.feat)
             .attr("class", "lineChart")
             .attr("height", height)
             .attr("width", width)
@@ -75,7 +101,7 @@ class LinePath {
               let curr = d3.select(this).attr("step");
               let next = (curr + 1) % 3;
               translation(curr, next, height);
-              d3.selectAll("g").attr("step", next);
+              changeStep(next);
             });
 
     self.border = self.svg
@@ -93,17 +119,7 @@ class LinePath {
             .attr("y", margin.top - 1.9)
             .attr("font-size", 9)
             .attr("fill", "black")
-            .text(feat);
-
-    self.mapped = [];
-    data.forEach((d, i) => {
-      self.mapped[i] = {};
-      // console.log(d, i);
-      self.mapped[i][""] = self.xScale(d[""]);
-      self.mapped[i]["1"] = self.yScale(d["1"]);
-    });
-
-    self.mapped.sort((a, b) => a[""] - b[""]);
+            .text(self.feat);
   }
 
   axis() {
@@ -148,8 +164,21 @@ class LinePath {
             .append("path")
             .attr("d", path)
             .attr("stroke", "black")
-            .attr("stroke-width", 2)
+            .attr("stroke-width", 1.5)
+            .attr("id", "path" + self.feat)
             .attr("fill", "none");
+    return path;
+  }
+
+  update() {
+    const self = this;
+    let path = "M " + self.mapped[0][""] + " " + self.mapped[0]["1"] + " ";
+    for(let i = 1; i < self.mapped.length; i++) {
+      path = path + "L " + self.mapped[i][""] + " " + self.mapped[i]["1"] + " ";
+    }
+
+    d3.select("#path" + self.feat)
+            .attr("d", path);
   }
 }
 
@@ -170,6 +199,7 @@ function drawStep(step) {
       data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
       // console.log(data);
       let lineChart = new LinePath(data, "main", feat, order[feat]);
+      lineChart.draw();
       lineChart.axis();
       lineChart.path();
     })
