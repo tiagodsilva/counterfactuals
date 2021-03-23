@@ -142,7 +142,7 @@ class LinePath {
 
   draw() {
     const self = this;
-    let dy = self.index * height;
+    self.dy = self.index * height;
 
     self.svg = d3.select("#" + self.divID)
             .append("g")
@@ -151,7 +151,7 @@ class LinePath {
             .attr("height", height)
             .attr("width", width)
             .attr("step", 0)
-            .attr("transform", "translate(0, " + dy + ")")
+            .attr("transform", "translate(0, " + self.dy + ")")
             .on("click", function(event, d) {
               let curr = d3.select(this).attr("step");
               let next = (curr + 1) % 3;
@@ -195,7 +195,7 @@ class LinePath {
       path = path + "L " + self.mapped[i][""] + " " + self.mapped[i]["1"] + " ";
     }
     // path = path + "Z";
-    self.svg
+    self.path = self.svg
             .append("path")
             .attr("d", path)
             .attr("stroke", "gray")
@@ -208,7 +208,7 @@ class LinePath {
   circles() {
     const self = this;
 
-    self.svg
+    self.circles = self.svg
       .selectAll("circle")
       .data(self.data)
       .join("circle")
@@ -240,6 +240,45 @@ class LinePath {
             .text(self.feat);
 
   }
+
+  brush() {
+    const self = this;
+
+    const brush = d3.brushX()
+            .extent([[margin.left, margin.top],
+                      [width - margin.right, height - margin.bottom]])
+            .on("start brush end", brushed);
+
+    self.svg
+      .append("g")
+      .attr("id", "brushGroup" + self.feat)
+      .call(brush)
+      .call(brush.move, [margin.left, margin.left + 2])
+      .call(g => g.select(".handle--w").remove())
+      .call(g => g.select(".selection").attr("cursor", "default"));
+
+    function brushed(event) {
+      const selection = event.selection;
+      if(selection == null) {
+        self.circles.attr("stroke", "red");
+        d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, margin.left + 5]);
+      } else {
+        const [xa, xb] = selection.map(self.xScale.invert);
+        let va = Math.min(xa, xb);
+        let vb = Math.max(xa, xb);
+        // console.log(d3.pointer(event));
+        const [x, y] = d3.pointer(event);
+        if(x) {
+          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x]);
+        }
+        self.circles.attr("stroke", d => {
+          // console.log(xa, d[""], xb);
+          return va <= d[""] && d[""] <= vb ? "blue" : "darkgray";
+        });
+      }
+    }
+  }
+
   update() {
     const self = this;
     let path = "M " + self.mapped[0][""] + " " + self.mapped[0]["1"] + " ";
@@ -291,6 +330,7 @@ function drawStep(step) {
     lineChart.path();
     lineChart.circles();
     lineChart.label();
+    lineChart.brush();
   }
 }
 
