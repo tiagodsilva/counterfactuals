@@ -246,7 +246,7 @@ class LinePath {
 
     const brush = d3.brushX()
             .extent([[margin.left, margin.top],
-                      [width - margin.right, height - margin.bottom]])
+                      [width - margin.right - margin.left, height - margin.bottom]])
             .on("start brush end", brushed);
 
     self.svg
@@ -260,7 +260,12 @@ class LinePath {
       .call(brush)
       .call(brush.move, [margin.left, margin.left + 2])
       .call(g => g.select(".handle--w").remove())
-      .call(g => g.select(".selection").attr("cursor", "default"));
+      .call(g => g.select(".selection").attr("cursor", "default"))
+      .call(g => g.select(".handle--e")
+              .attr("fill", "black")
+              .attr("opacity", .4)
+              .attr("stroke-width", 3)
+              .attr("stroke", "white"));
 
     function brushed(event) {
       const selection = event.selection;
@@ -273,8 +278,10 @@ class LinePath {
         let vb = Math.max(xa, xb);
         // console.log(d3.pointer(event));
         const [x, y] = d3.pointer(event);
-        if(x && x > margin.left) {
+        if(x && x > margin.left && x < width - margin.right) {
           d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x]);
+        } else if(x >= width - margin.right) {
+          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, width - margin.right]);
         }
         self.circles.attr("stroke", d => {
           // console.log(xa, d[""], xb);
