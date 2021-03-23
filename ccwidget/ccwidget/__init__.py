@@ -2,6 +2,8 @@ from ._version import version_info, __version__
 
 from .Projection import *
 from .CFOverview import *
+from .CFLines import * 
+from .Lines import * 
 
 def _jupyter_nbextension_paths():
     """Called by Jupyter Notebook Server to detect if it is a valid nbextension and

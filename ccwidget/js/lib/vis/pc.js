@@ -1,37 +1,19 @@
 import * as d3 from "d3";
+import { sortParallel, applyNoise } from "../utils/noise.js";
+import { clone, parseNumbers } from "../utils/utils.js";
+//export const colors = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477", "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc", "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
+var colors = d3.scaleOrdinal(d3.schemePastel1);//d3.schemeAccent); 
+
+console.log(d3.schemeSet2)
+
 function filterCluster(data, cluster) {
   // console.log(data, cluster);
   return d3.filter(data, d => cluster.includes(d[""]));
 }
 
-function clone(data, columns) {
-  let dummy = [];
-  for(let i = 0; i < data.length; i++) {
-    dummy[i] = {};
-    dummy[i][""] = data[i][""];
-    for(let field of columns) {
-      // console.log(data[i], data[i][field], field);
-      let v = data[i][field];
-      // v = data[i][field];
-      dummy[i][field] = v;
-    }
-  }
-  return dummy;
-}
-
-function parseNumbers(arr) {
-  for(let i = 0; i < arr.length; i++) arr[i] = eval(arr[i]);
-  return arr;
-}
-
 function setGroups(divID, df) {
 
   let div = d3.select(divID);
-
-  let clusters = parseNumbers(d3.map(df, d => d.Clusters));
-  clusters = clusters.filter((v, i, s) => s.indexOf(v) == i && v != -1);
-  let lenClusters = clusters.length;
-  // console.log(clusters);
 
   let axisWidth = 129;
 
@@ -39,12 +21,7 @@ function setGroups(divID, df) {
         .attr("height", height)
         .attr("width", axisWidth)
         .attr("id", "yAxisGraphic");
-  /*
-  let svg = div.append("svg")
-        .attr("height", height)
-        .attr("width", width + 3.9)
-        .attr("id", "cluster0");
-  */
+
   let yAxisGroup = svgAxis.append("g")
           .attr("id", "yAxis")
           .attr("transform", "translate(" + axisWidth + ", 0)");
@@ -60,125 +37,11 @@ function setDiv(divID) {
     .style("height", "100%");
 }
 
-function randomNoise(l, r) {
-  let xl = l || -2
-  var xr = r || 2
-  return Math.random() * (xr - xl) + xl
+function getFieldRange(data, field) {
+  let v = d3.map(data, d => d[field]);
+  v = v.slice(0, v.length - 1);
+  return [d3.min(v), d3.max(v)];
 }
-
-function sortParallel(indexes, index, df, columns) {
-  // console.log(indexes);
-  if(indexes.length == 1 || index == columns.length) {
-    // if(indexes.length != 1) {console.log(indexes)};
-    return indexes;
-  }
-
-  let feat = columns[index];
-
-  let xs = filter(df, indexes); // get the indexes
-
-  let returnIndexes = [];
-  for(let value of sorted(unique(xs, feat))) {
-    // we need the indexes of `value` in xs
-    var a = sortParallel(getIndexes(xs, feat, value), index + 1, df, columns);
-    // console.log("a", a);
-    returnIndexes = returnIndexes.concat(a);
-    // console.log("b", returnIndexes);
-  }
-
-  return returnIndexes;
-
-}
-
-function sortp(indexes, index, df, columns) {
-  window.returnIndexes = [];
-  // sortParallel(indexes, index, df, columns);
-  // console.log(sortParallel(indexes, index, df, columns));
-  return sortParallel(indexes, index, df, columns);
-}
-// utils functions for noise
-// ************************************************************************ //
-function getIndexes(list, feat, v) {
-  let indexes = [];
-  let index = 0;
-
-  for(let key of Object.keys(list)) {
-    if(list[key][feat] == v) {
-      indexes.push(key);
-    }
-  }
-
-  return indexes;
-}
-
-function filter(list, indexes) {
-  let obj = {};
-  for(let key of Object.keys(list)) {
-    if(indexes.includes(key)) {
-      obj[key] = list[key];
-    }
-  }
-  return obj;
-}
-
-function unique(list, feat) {
-  let arr = Object.values(list);
-  arr = d3.map(arr, d => d[feat]);
-  return arr.filter((v, i, s) => s.indexOf(v) == i);
-}
-
-function sorted(list, dir) {
-  let direction = dir || 1
-  return list.slice().sort((a, b) => direction * (a - b));
-}
-
-function map(list, field) {
-  let df = d3.map(list, d => d[field]);
-  return df.slice(0, df.length - 1);
-}
-// ************************************************************************ //
-
-function applyNoise(data, columns, ncol, origin, fdir) {
-  let step = 1e-2;
-
-  let aData = Object.assign({}, data);
-  delete aData["columns"];
-  let indexes = [];
-  let originSteps = {};
-  for(let j = 0; j < ncol; j++) {
-    let feat = columns[j];
-    let values = unique(aData, feat);
-    let max = d3.max(values);
-    let min = d3.min(values);
-
-    let range = max == min ? 1 + max/15 : max - min;
-    for(let value of values) {
-      let iValues = getIndexes(aData, feat, value);
-      if(j == 0) {
-        indexes = sortParallel(iValues, j + 1, aData, columns);
-        // sortp(iValues, j + 1, aData, columns);
-      } else {
-        indexes = sortParallel(iValues, j - 1, aData, columns);
-        // sortp(iValues, j + 1, aData, columns);
-      }
-
-      let steps = [];
-      for(let i = 0; i < indexes.length; i++) {
-        steps[i] = step * range * i - step * range * indexes.length/2;
-        aData[indexes[i]][feat] = +aData[indexes[i]][feat] + steps[i];
-      }
-      // console.log(feat, value, origin[feat]);
-      if(value == origin[feat]) {
-        originSteps[feat] = [-step * range * indexes.length/2,
-                  step * range * indexes.length/2];
-      }
-    }
-  }
-
-  return {data: Object.values(aData),
-            steps: originSteps};
-}
-
 
 function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   let fields = {}
@@ -194,16 +57,14 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   for(let field of columns) {
     origin[field] = d3.map(data, d => d[field])[0];
   }
+  console.log(origin);
   let dummyData = clone(data, columns);
   // console.log(dummyData);
   let noiseData = applyNoise(filterCluster(dummyData, cluster), columns, ncol, origin);
   let df = noiseData.data;
   let steps = noiseData.steps;
-  // let noiseFree = filterCluster(data, cluster);
-  // console.log(df);
-  // df = debug(df, columns, ncol);
-  // console.log(df);
-  // let ncol = columns.length - 1;
+
+  let fullNoiseData = applyNoise(clone(data, columns), columns, ncol, origin).data;
   let axisGroup = d3.select("#cluster" + clusterIndex + "Axis");
   for(let i = 0; i < ncol; i++) {
     let field = columns[i];
@@ -236,6 +97,8 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     let min = d3.min(dfField);
     let max = d3.max(dfField);
 
+    let domain = getFieldRange(fullNoiseData, field);
+
     fields[field]["fdir"] = fdir;
     // I am using a random nosie; however,
     // the visual was a kinda of strange
@@ -243,11 +106,13 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
     // console.log(nf);
     let mid = (margin.left + width - margin.right)/2;
     let range = fdir == 1 ? [mid, width - margin.right] : [margin.left, mid];
-    if(d3.min(nf[field]) == d3.max(nf[field])) {
+    // console.log(field, domain);
+
+    if(d3.min(nf[field]) == d3.max(nf[field]) && d3.max(nf[field]) == origin[field]) {
       fields[field]["scale"] = d3.scaleLinear()
               .domain([min - (max/15 + 1), max + (max/15 + 1)])
               .range([margin.left, width - margin.right]);
-
+      // console.log(origin[field]);
       // let midScale = fields[field]["scale"].invert(mid);
       fields[field]["dummyAxis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
@@ -262,7 +127,7 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
               // .ticks(2)
               .tickSizeOuter(0)
               .tickFormat(x => Math.floor(x * 1000)/1000)
-              .tickValues([max]);
+              .tickValues([origin[field]]);
 
     } else {
       let temp = d3.scaleLinear()
@@ -285,10 +150,13 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
       }
 
       // console.log(range, mid, fdir);
+      let domain = fdir == 1 ? [origin[field], max] : [min, origin[field]];
+      if(fdir == 1 && origin[field] > min) domain[0] = min;
+      if(fdir == -1 && origin[field] < max) domain[1] = max;
+      // console.log(domain, [min, max]);
       fields[field]["scale"] = d3.scaleLinear()
-              .domain([min, max])
+              .domain(domain)
               .range(range);
-
 
       fields[field]["axis"] = d3.axisBottom()
               .scale(fields[field]["scale"])
@@ -314,27 +182,8 @@ function getClusterData(data, columns, ncol, cluster, clusterIndex, yScale) {
   return fields;
 }
 
-function getPreviousX(fieldA, fieldB, cluster, d) {
-  let thisCluster = document.getElementById("cluster" + cluster + "Lines");
-  // console.log(fieldA, fieldB);
-  let lines = thisCluster.getElementsByClassName(fieldA +
-            fieldB + "Lines")[0];
-  let previousLine = lines.getElementsByClassName("cluster" + cluster + d)[0];
-  let previousX = d3.select(previousLine).attr("x2");
-  return previousX;
-}
-
-function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
+export function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
           clusterSizes, thickScale) {
-  svg.append("g")
-    .attr("class", "clusterName")
-    .append("text")
-    .attr("x", (margin.left + width - margin.right)/2)
-    .attr("y", margin.top)
-    .attr("text-anchor", "middle")
-    .attr("font-size", 10.5)
-    .text("Cluster " + clusterIndex);
-
   let axisGroup = svg.append("g")
           .attr("id", "cluster" + clusterIndex + "Axis");
 
@@ -377,7 +226,9 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
           let nextScale = fields[nextField]["scale"];
           let nextSelf = fields[nextField]["df"][j];
 
-          return "[" + previousSelf + "," +  nextSelf + "]";
+          // return "[" + previousSelf + "," +  nextSelf + "]";
+          return "{origin: " + fields[previousField]["origin"] + "," +
+                  fields[previousField]["df"][j] + "}"
         })
         .attr("x1", (d, j) => {
           let scale = fields[previousField]["scale"];
@@ -395,8 +246,10 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
             return scale(self);
         })
         .attr("y2", yScale(nextField) - yScale.bandwidth()/2)
+        .attr("opacity", 1)
         .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
-        .attr("stroke", "blue")
+        .attr("stroke", d => d.includes("R") ? '#8da0cb' : d.includes("S") ?
+                                    '#fdbb84' : "red")//fc8d62
         .on("mouseover", function(event, d) {
           // console.log(d)
           var elementClass = "cluster" + this.attributes.cluster.value + d;
@@ -404,16 +257,15 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
             .selectAll("line")
             .attr("opacity", .05);
           // console.log(elementClass);
+          // console.log(fields[previousField]["df"], fields[previousField]["origin"])
           d3.selectAll("." + elementClass)
-            .attr("stroke", "red")
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 0.5)
             .attr("opacity", 1);
         })
         .on("mouseout", function(event, d) {
             var elementClass = "cluster" + clusterIndex + d;
             d3.select("#cluster" + this.attributes.cluster.value + "Lines")
               .selectAll("line")
-              .attr("stroke", "blue")
               .attr("stroke-width", .5 || thickScale(clusterSizes[cluster]))
               .attr("opacity", 1);
         });
@@ -426,18 +278,50 @@ function drawCluster(svg, cluster, clusterIndex, data, columns, ncol, yScale,
 
 }
 
-function addContextMenu(svg) {
-	// initially, we need to remove the svg
+export function addContextMenu(svg,index,cluster) {
+	// this function will add the buttons
+  // to the cluster: the exit button
+  // and the getCluster button
+
+  // the rect for accessing the Clusters
+
+  svg.append("rect")
+    .attr("x", margin.left)
+    .attr("y", margin.top/2)
+    .attr("width", width - margin.right - 9)
+    .attr("height", 9)
+    .attr("id", "getCluster")
+    .attr("fill", d => colors(index))
+    .on("mouseover", function(event, d) {
+      this.__cluster = cluster;
+      d3.select(this)
+        .attr("opacity", .5);
+    })
+    .on("mouseout", function(event, d) {
+      d3.select(this)
+        .attr("opacity", 1);
+    })
+    .on("click", function(event, d) {
+      let i = +this.parentElement.id.replace("cluster", "");
+      console.log(this.__cluster.counterfactuals);
+      let cluster = this.__cluster;
+      cluster.view.model.set("_selected_clusters", cluster.counterfactuals)
+      cluster.view.touch();
+      return window.clusters[i];
+    })
+
+  // the rect for removing the cluster
 	svg.append("rect")
     .attr("x", width - margin.right)
     .attr("y", margin.top/2)
     .attr("width", 9)
     .attr("height", 9)
-    .attr("stroke", "black")
-    .attr("fill", "red")
+    //.attr("stroke", "black")
+    //.attr("fill", "red")
+	.attr("fill", function(){return colors(index)})
     .on("mouseover", function(event, d) {
       d3.select(this)
-        .attr("opacity", .5);
+        .attr("opacity", .1);
     })
     .on("mouseout", function(event, d) {
       d3.select(this)
@@ -448,11 +332,13 @@ function addContextMenu(svg) {
     // console.log(self);
 		// before removing it,
 		// we need to move the subsequent clusters
+    // console.log(self);
 		let regex = /\d+/;
 		let clusterIndex = +self.id.match(regex)[0];
 		let container = document.getElementById("vis");
 		let cluster = container.lastChild;
 		let maxCluster = +cluster.id.match(regex)[0];
+		d3.selectAll(".c"+clusterIndex).attr('class','c-1').style("stroke-width", 0.2).style("stroke","black");
     // console.log(clusterIndex, maxCluster);
 		// now, we will rename each cluster
 		// that lies after this
@@ -460,14 +346,17 @@ function addContextMenu(svg) {
   		let cluster = d3.select("#cluster" + i)
 
       cluster
-  			.selectAll(".clusterName")
-        .selectAll("text")
-  			.text("Cluster " + (i - 1));
-
-      cluster
         .select("#cluster" + i + "Axis")
         .attr("id", "cluster" + (i - 1) + "Axis");
 
+      cluster
+        .selectAll("rect")
+        .attr("fill", colors(i - 1));
+
+      // console.log(i, d3.selectAll(".c" + i)._groups);
+      d3.selectAll(".c" + i)
+        .style("stroke", colors(i - 1));
+        // .attr("stroke", colors[i - 2]);
       // we need to modify the lines!
       let linesGroup = document.getElementById("cluster" + i + "Lines");
       let lines = linesGroup.getElementsByTagName("line");
@@ -485,6 +374,10 @@ function addContextMenu(svg) {
 
 			d3.select("#cluster" + i)
 				.attr("id", "cluster" + (i - 1));
+
+				d3.selectAll(".c" + i)
+                  .attr("class", "c" + (i - 1))
+                  .attr("stroke",colors(i - 1))
 
       window.clusters[i - 1] = window.clusters[i];
 		}
@@ -513,24 +406,10 @@ export function drawAxis(data) {
 
 }
 
-export function newCluster(data, columns, ncol, cluster, index) {
-  let container = d3.select("#vis");
-  let svg = container
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("id", "cluster" + index);
-  addContextMenu(svg);
-  let yScale = d3.scaleBand()
-          .domain(columns)
-          .range([margin.top, height - margin.bottom]);
-
-  drawCluster(svg, cluster, index, data, columns, ncol, yScale);
-}
-
-let margin = {top: 25, bottom: 25, left: 9, right: 17};
-let height = 599;
-let width = 113;
+export let margin = {top: 25, bottom: 25, left: 9, right: 17};
+//let height = 599;
+export let height = 493;
+export let width = 113;
 
 /*
 d3.csv("data/df_full.csv").then(function(data) {

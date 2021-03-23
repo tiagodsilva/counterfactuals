@@ -34,9 +34,11 @@ var ProjectionView = widgets.DOMWidgetView.extend({
         let projection = this.model.get("projection");
         let dist = this.model.get("dist");
         let cfa = this.model.get("cfa");
+        let dist_orig_real = this.model.get("dist_orig_real");
         // console.log(correspondents);
+        // console.log(cfa);
         setTimeout(() => {
-          DrawProjection(correspondents, projection, dist, cfa)
+          DrawProjection(correspondents, projection, dist, cfa, dist_orig_real, this)
         }, 225);
         // Observe changes in the value traitlet in Python, and define
         // a custom callback.

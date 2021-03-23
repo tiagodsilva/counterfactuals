@@ -1,8 +1,9 @@
 import drawStar from "./star.js";
 const d3 = require("d3");
 d3.lasso = require("./lasso").lasso;
-import { drawAxis, newCluster } from "./pc.js";
-const colors = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477", "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc", "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
+import { drawAxis } from "./pc.js";
+import { Cluster } from "../Cluster.js";
+var colors = d3.scaleOrdinal(d3.schemeSet1); 
 var CLASES ={};
 var DICTIONARY ={};
 var stars = [];
@@ -11,27 +12,40 @@ var sizes = {'CFR':6,'Orig':10,'CFROrig':8,'CFS':6};
 window.clusters = [];
 var counter = 0;
 
-function DrawPointGroups(divID,divLabel,dataset, data){
+var dist_orig_real = [];
+
+var flag_Chart = true;
+
+function DrawPointGroups(divID,divLabel,dataset, data, dist_orig_real, view){
     d3.select("#"+divID).selectAll("svg").remove();
-    d3.select("#"+divLabel).selectAll("svg").remove();
     let divHeight = document.getElementById(divID).clientHeight;
     let divWidth  = document.getElementById(divID).clientWidth;
+    //let divWidth  = document.getElementById(divID).clientHeight;
 
     var marginMain = {top: 20, right: 20, bottom: 20, left: 20};
     var width = divWidth -marginMain.right - marginMain.left;
     var height = divHeight - marginMain.bottom -marginMain.top;
-
+    var lasso;
 
     var svg = d3.select("#"+divID)
         .append("svg")
         .attr("width", divWidth)
-        .attr("height",divHeight);
+        .attr("height",divHeight)
+        .on("dblclick", function (d, i) {//contextmenu
+            if(!flag_Chart){
+                Principal();
+                Addlegend(allgroups);
+            }else{flag_Chart=false;
+                GetAtrrayStar();
+		legend.selectAll("*").remove();
+		}
+	});
 
-        var LinesSvg = svg
-        .append("g")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("transform","translate(" + marginMain.left + "," + marginMain.top + ")");
+    var LinesSvg = svg
+         .append("g")
+         .attr("width", width)
+         .attr("height", height)
+         .attr("transform","translate(" + marginMain.left + "," + marginMain.top + ")");
 
     var svgGroupScatter = svg
         .append("g")
@@ -39,19 +53,19 @@ function DrawPointGroups(divID,divLabel,dataset, data){
         .attr("height", height)
         .attr("transform","translate(" + marginMain.left + "," + marginMain.top + ")");
 
-    /*svgGroupScatter.append("rect")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill",'white' )
-        .attr("stroke", "gray")
-        .attr("stroke-opacity", 0.3);*/
+    let legend = svg.append("g")
+        .attr("class","legend")
+        .attr("transform","translate(10,10)")
+        .style("font-size","12px");
 
-    //       AXIS  AND SCALE      //
-    //xmar = d3.extent(dataset, function(d) { return d.x; });
-    let xmar = d3.extent(dataset, d=> d.x);
-    let ymar  = d3.extent(dataset,d=> d.y);
-    var xScale = d3.scaleLinear().domain(xmar).range([ 0, width]);
-    var yScale = d3.scaleLinear().domain(ymar).range([ height, 0]);
+
+    var xScale = d3.scaleLinear().range([ 0, width]);
+    var yScale = d3.scaleLinear().range([ height, 0]);
+    let xmar  =  d3.extent(dataset, d=> d.x);
+    let ymar  =  d3.extent(dataset,d=> d.y);
+
+    xScale.domain(xmar);
+    yScale.domain(ymar);
 
 
     // Axis for the parallel coordinates
@@ -60,16 +74,87 @@ function DrawPointGroups(divID,divLabel,dataset, data){
     // d3.csv("data/cfa.csv").then(function(data) {drawAxis(data)});
 
     var svgCircle =svgGroupScatter.append('g')
-    var circles = svgCircle.selectAll("dot")
+    var circles = svgCircle.selectAll("circle")
         .data(dataset)
-        .enter()
-        .append("circle")
+        .join("circle")
             .attr("id",d => d.id)
-            .attr("class", d => d.clase)
+            //.attr("class", d => d.clase)
+            .attr("class", "c-1")
+            .attr("fill", function(d){if(d.clase=='CFR'){return '#8da0cb' }else{if(d.clase=='CFS'){ return '#fee8c8' }else{return 'red'}}})//
+            .attr('stroke','black')
+            .attr("stroke-width", 0.2)
+            .attr("fill-opacity",0.7)
             .attr("cx", d => xScale(d.x)  )
             .attr("cy", d => yScale(d.y) )
             .attr("r", d => sizes[d.clase])
             .on("click", GetAtrrayStar);
+
+    function Principal(){
+        flag_Chart =true;
+        d3.selectAll(".second").attr("fill-opacity",0).attr("stroke-opacity",0);
+        d3.selectAll(".main").attr("fill-opacity",1).attr("stroke-opacity",1);
+        d3.selectAll("#axis").remove();
+        //svgCircle.selectAll("circle").remove();
+        circles = svgCircle.selectAll("circle")
+        .data(dataset)
+        .join("circle")
+        //.transition()           // apply a transition
+        //.duration(400)
+            .attr("id",d => d.id)
+            //.attr("class", d => d.clase)
+            .attr("fill", function(d){if(d.clase=='CFR'){return '#8da0cb' }else{if(d.clase=='CFS'){ return '#fee8c8' }else{return 'red'}}})
+            .attr("fill-opacity",0.7)
+            .attr("cx", d => xScale(d.x)  )
+            .attr("cy", d => yScale(d.y) )
+            .attr("r", d => sizes[d.clase])
+            .on("click", GetAtrrayStar);
+
+        LinesSvg.selectAll("line").attr("opacity",1);
+    }
+
+    function GetAtrrayStar(e){
+        //svgCircle.selectAll("circle").remove();
+        d3.selectAll(".second").attr("fill-opacity",1).attr("stroke-opacity",1);
+        d3.selectAll(".main").attr("fill-opacity",0).attr("stroke-opacity",0);
+
+
+        flag_Chart =false;
+
+        let xmarStar = d3.extent(dist_orig_real,function(d){let dclase = d['Name'].replace(/[0-9]/g, ''); if(dclase=='CFS'){return d.DistOrig;}else{0}});
+        let ymarStar = d3.extent(dist_orig_real, function(d){let dclase = d['Name'].replace(/[0-9]/g, ''); if(dclase=='CFS'){return d.DistCFR;}else{0}});
+        //let maximo = Math.max(xmarStar[1],ymarStar[1])
+        let xScaleStar = d3.scaleLinear().domain(xmarStar).range([ 0, width]);
+        let yScaleStar = d3.scaleLinear().domain(ymarStar).range([ height, 0]);
+
+        circles = svgCircle.selectAll("circle")
+            .data(dist_orig_real)
+            .join("circle")
+            //.transition()           // apply a transition
+            //.duration(400)
+            //.attr("class",d => d['name'].replace(/[0-9]/g, ''))
+            .attr("fill", function(d){let dclase = d['Name'].replace(/[0-9]/g, ''); if(dclase=='CFR'){return '#8da0cb' }else{if(dclase=='CFS'){ return '#fee8c8' }else{return 'red'}}})
+            .attr("fill-opacity", function(d){let dclase = d['Name'].replace(/[0-9]/g, ''); if(dclase=='CFS'){return 0.7 }else{ return 0;}})
+            .attr("cx", d => xScaleStar(d.DistOrig))
+            .attr("cy", d => yScaleStar(d.DistCFR))
+            .attr("r", d => sizes[d['Name'].replace(/[0-9]/g, '')]);
+        
+        
+        var x_axis = d3.axisBottom()
+            .scale(xScaleStar);
+        var y_axis = d3.axisLeft()
+            .scale(yScaleStar);
+
+        svgCircle.append("g").attr("id","axis")
+        .attr("transform", "translate("+0+", "+0+")")
+        .call(y_axis);
+
+        svgCircle.append("g").attr("id","axis")
+        .attr("transform", "translate("+0+", "+height+")")
+        .call(x_axis);
+
+        LinesSvg.selectAll("line").attr("opacity",0);
+        //svgCircle.exit().remove();
+    }
 
     /************************* LASSO ***************************************** */
     /*********************** LASSO SELECT ************************************/
@@ -118,22 +203,19 @@ function DrawPointGroups(divID,divLabel,dataset, data){
         var selectedDots  = lasso.selectedItems()._groups[0].map(d=>d.id);
 
         if(selectedDots.length > 0) {
+			lasso.selectedItems().style("stroke",colors(clusters.length)).attr('class',"c"+clusters.length);
+			lasso.selectedItems().style("stroke-width", 1.5).attr('class',"c"+clusters.length);
           window.clusters.push(selectedDots);
           console.log(window.clusters)
           //Thiago
-
-          let columns = Object.keys(data[0]);
-          columns = columns.filter(d => d != "Clusters" && d != "");
-          let ncol = columns.length;
-
-          newCluster(data, columns, ncol, window.clusters[window.clusters.length - 1],
-                  window.clusters.length - 1);
+          let cluster = new Cluster(selectedDots, window.clusters.length - 1, view);
+          cluster.draw(data);
         }
 
     };
 
 
-    var lasso = d3.lasso()
+    lasso = d3.lasso()
             .closePathSelect(true)
             .closePathDistance(100)
             .items(circles)
@@ -142,67 +224,49 @@ function DrawPointGroups(divID,divLabel,dataset, data){
             .on("draw",lasso_draw)
             .on("end",lasso_end);
 
-
-
     svg.call(lasso);
 
     /************************ end lasso select *******************************/
     /************************* LASSO ***************************************** */
     /************************* LEGEND***************************************** */
+    /************************* LEGEND***************************************** */
     var allgroups =[];
     for (const [key, value] of Object.entries(CLASES)) {allgroups.push(key); }
-    var size = 25;
+    Addlegend(allgroups);
+    function Addlegend(allgroups){
+        let size = 25;
+        legend.selectAll("myrect")
+            .data(allgroups)
+            .enter()
+            .append("circle")
+                .attr("id",d =>"classeDot_"+d)
+                .attr("class",d => d)
+                .attr("cx", size)
+                .attr("cy", (d,i) => i*size)//10 + i*(size+5)})
+                .attr("r", 7);
 
-    document.getElementById(divLabel).style.overflow = "auto";
-    var marginLabel = {top: 30, right: 2, bottom: 2, left: 5};
-    var width_label = document.getElementById(divLabel).clientWidth;
-    var height_label= (allgroups.length)*size+marginLabel.top+marginLabel.bottom;
-
-    var svg_width_label = width_label-marginLabel.left - marginLabel.right;
-    var svg_height_label = (allgroups.length)*size+100;
-
-    var Scatterlegend =  d3.select("#"+divLabel)
-        .append("svg")
-        .attr("width", width_label)
-        .attr("height",height_label)
-
-    let Scatterlegend_SVG = Scatterlegend.append('g')
-        .append("g")
-        .attr("width", svg_width_label)
-        .attr("height", svg_height_label)
-        .attr("transform","translate(" + (marginLabel.left ) + "," + marginLabel.top + ")");
-
-    Scatterlegend_SVG.selectAll("myrect")
-        .data(allgroups)
-        .enter()
-        .append("circle")
-             .attr("id",d =>"classeDot_"+d)
-             .attr("class",d => d)
-             .attr("cx", size)
-             .attr("cy", (d,i) => i*size)//10 + i*(size+5)})
-             .attr("r", 7);
-
-    Scatterlegend_SVG.selectAll("mylabels")
-        .data(allgroups)
-        .enter()
-        .append("text")
-            .attr("x", size+size*0.5 )
-            .attr("y", (d,i) => i*size+4)//15 + i*(size+5)})
-            .style("fill", "#4C4C4C")
-            .text(d => d+" ("+CLASES[d].count+")")
-            .attr("text-anchor", "left")
-            .style("alignment-baseline", "middle");
+        legend.selectAll("mylabels")
+             .data(allgroups)
+             .enter()
+             .append("text")
+                 .attr("x", size+size*0.5 )
+                 .attr("y", (d,i) => i*size+4)//15 + i*(size+5)})
+                 .style("fill", "#4C4C4C")
+                 .text(d => d+" ("+CLASES[d].count+")")
+                 .attr("text-anchor", "left")
+                 .style("alignment-baseline", "middle");
+    }
 
     /***********************END ** LEGEND************************************* */
 
     /***********************Drawing - IMPORTANT ************************************* */
-    /*
+
     LinesSvg
         .selectAll("lines")
             .data(CORRESPONDIENTES)
             .enter()
             .append('line')
-            .attr("stroke", "lightgreen")
+            .attr("stroke", "Gainsboro")
             .attr("stroke-width", 1)
             .attr("x1",function(d){
                 return  xScale(d3.select("#"+d['1']).data()[0].x);
@@ -211,11 +275,11 @@ function DrawPointGroups(divID,divLabel,dataset, data){
                 return yScale(d3.select("#"+d['1']).data()[0].y);
                 })
             .attr("x2", function(d) {return xScale(d3.select("#"+d['2']).data()[0].x);})
-            .attr("y2", function(d) {return yScale(d3.select("#"+d['2']).data()[0].y);}); */
+            .attr("y2", function(d) {return yScale(d3.select("#"+d['2']).data()[0].y);});
 }
 
 export function DrawProjection(correspondents,
-        projection, dist, cfa) {
+        projection, dist, cfa, dist_orig_real, view) {
 
   CORRESPONDIENTES = correspondents;
   projection.forEach(function(d){
@@ -225,7 +289,7 @@ export function DrawProjection(correspondents,
   });
   var tempArray = Array.from(d3.group(projection,function(g){return g.clase}));
   tempArray.forEach(function(d){ CLASES[d[0]] = {'count':d[1].length}; });
-  DrawPointGroups('First_ScatterPlot','Second_ScatterPlot',projection, cfa);
+  DrawPointGroups('First_ScatterPlot', 'Second_ScatterPlot', projection, cfa, dist_orig_real, view);
 
   dist.forEach(function(d){
       Object.keys(d).forEach(function(key) {

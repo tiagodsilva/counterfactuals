@@ -5,11 +5,14 @@
 // already be loaded by the notebook otherwise.
 
 // Export widget models and views, and the npm package version number.
-import {ProjectionModel, ProjectionView} from "./Projection.js";
+import {ProjectionModel, ProjectionView} from "./Projection.js"; 
+import {LinesModel, LinesView} from "./Lines.js"; 
 import version from "../package.json";
 
 export {
   ProjectionModel,
-  ProjectionView,
+  ProjectionView, 
+  LinesModel, 
+  LinesView, 
   version 
 }

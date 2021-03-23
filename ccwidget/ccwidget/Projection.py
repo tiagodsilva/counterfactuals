@@ -1,5 +1,5 @@
 import ipywidgets as widgets
-from traitlets import Unicode, Dict, List
+from traitlets import Unicode, Dict, List, observe
 from .utils.root_path import ROOT_PATH
 # See js/lib/Projection.js for the frontend counterpart to this file.
 
@@ -28,10 +28,14 @@ class Projection(widgets.DOMWidget):
     dist = List([]).tag(sync = True)
     cfr_cfs = List([]).tag(sync = True)
     projection = List([]).tag(sync = True)
+    dist_orig_real = List([]).tag(sync = True)
 
     filepath = Unicode(ROOT_PATH).tag(sync = True)
+
+    _selected_clusters = List([]).tag(sync = True)
     # value = Unicode("Hello!").tag(sync = True)
-    def __init__(self, *args, cfa, dist, cfr_cfs, projection, **kwargs):
+    def __init__(self, *args, cfa, dist, cfr_cfs, projection, dist_orig_real, on_select,
+        **kwargs):
         """
         Constructor method for the widget.
         Inherits from widgets.DOMWidget.
@@ -60,3 +64,12 @@ class Projection(widgets.DOMWidget):
         self.dist = dist
         self.cfr_cfs = cfr_cfs
         self.projection = projection
+        self.dist_orig_real = dist_orig_real
+        self._selected_clusters = []
+        self._on_select = on_select
+
+    @observe("_selected_clusters")
+    def _observe_clusters(self, change):
+        # print(self._selected_clusters)
+        if self._on_select is not None:   
+            self._on_select(self._selected_clusters)

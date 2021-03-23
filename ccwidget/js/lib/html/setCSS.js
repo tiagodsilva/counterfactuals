@@ -6,16 +6,16 @@ export default function setCSS(el) {
 	style.innerHTML = `
 	#container {
 	    width:100%;
-	    text-align:center;
+	    text-align:left;
 	    margin:0px;
 	    margin:0px;
 	}
 	#container > div {
-	    height:700px;
+	    height:500px;
 	    display: inline-block;
 	    vertical-align: top;
 	    border-radius: 2px;
-	    text-align:center;
+	    text-align:left;
 	    left:0px;
 	    margin:0px;
 	    padding-left:5px;
@@ -26,14 +26,14 @@ export default function setCSS(el) {
 	}
 
 	.cfWidget {
-		height:725px;
+		height:550px;
 		white-space:nowrap; 
 		overflow-x:scroll;
 	}
 
 	.CFR {
 	    stroke: white;
-	    fill: #3366cc;/*#dc3912*/
+	    fill: #8da0cb;/*#dc3912*/
 	    fill-opacity:0.5;
 	    stroke-opacity:1;
 	}
@@ -53,7 +53,7 @@ export default function setCSS(el) {
 
 	.CFS {
 	    stroke: white;
-	    fill: #ff9900;
+	    fill: #fee8c8;
 	    fill-opacity:1;
 	    stroke-opacity:1;
 	}
