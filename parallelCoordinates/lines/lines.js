@@ -268,7 +268,7 @@ class LinePath {
         let vb = Math.max(xa, xb);
         // console.log(d3.pointer(event));
         const [x, y] = d3.pointer(event);
-        if(x) {
+        if(x && x > margin.left) {
           d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x]);
         }
         self.circles.attr("stroke", d => {
