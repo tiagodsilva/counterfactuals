@@ -252,6 +252,11 @@ class LinePath {
     self.svg
       .append("g")
       .attr("id", "brushGroup" + self.feat)
+      .on("contextmenu", function(event) {
+        if(event.shiftKey) {
+          d3.select(this).call(brush.move, [margin.left, margin.left + 2]);
+        }
+      })
       .call(brush)
       .call(brush.move, [margin.left, margin.left + 2])
       .call(g => g.select(".handle--w").remove())
