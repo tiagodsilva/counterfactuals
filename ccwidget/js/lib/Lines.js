@@ -1,4 +1,5 @@
 import * as widgets from '@jupyter-widgets/base'; 
+import {LinePath, drawStep, fdir, features, drawCanvas} from "./vis/lines.js"; 
 var _ = require('lodash');
 
 // When serialiazing the entire widget state for embedding, only values that
@@ -20,8 +21,17 @@ var LinesModel = widgets.DOMWidgetModel.extend({
 var LinesView = widgets.DOMWidgetView.extend({
     // Defines how the widget gets rendered into the DOM
     render: function() {
-        this.value_changed();
-   
+        // this.value_changed();
+        
+        let div = document.createElement("div"); 
+        div.id = "CFLinesDIV"; 
+        this.el.appendChild(div); 
+
+        const dataset = this.model.get("cfData"); 
+        setTimeout(() => { 
+            drawCanvas(div.id, dataset); 
+            drawStep(0, "CFLinesSVG", this); 
+        }, 229); 
         // Observe changes in the value traitlet in Python, and define
         // a custom callback.
         this.model.on('change:value', this.value_changed, this);

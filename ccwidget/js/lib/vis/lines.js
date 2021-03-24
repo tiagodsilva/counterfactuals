@@ -1,10 +1,11 @@
-const features = ["BusStops", "ExpansionPhase", "Favelas", "FontainArea",
+import * as d3 from "d3";
+export const features = ["BusStops", "ExpansionPhase", "Favelas", "FontainArea",
         "GarbageCollection", "HighIncomeHolder", "HighRiskAreas", "ImprovisedHousing",
         "LiterateHouseHolder", "Passengers", "PermanentHousing", "Population", "PopulationDensity",
         "Schools", "SewageCollection", "TravelingTime", "Verticalization", "WaterSupply",
         "WomanHouseHolder", "YoungManRate", "Bars"];
 
-const fdir = {
+export const fdir = {
   "Passengers": -1,
   "TravelingTime": 1,
   "HighRiskAreas": 1,
@@ -28,35 +29,28 @@ const fdir = {
   "BusStops": -1
 };
 
-const dataPath = "../projection/data/recFiltering/";
 const nFeatures = features.length;
 const nSteps = 3;
 const height = 59;
 const width = 259;
 const margin = {left: 35, bottom: 16, right: 15, top: 14};
 
-function readData() {
-  let temp = {};
-  for(let i = 0; i < nSteps; i++) {
-    temp[i] = {};
-    for(let feat of features) {
-      const file = dataPath + "Step" + i + "/" + feat + ".csv";
-      d3.csv(file).then(data => temp[i][feat] = data);
-    }
-    const file = dataPath + "Step" + i + "/order.csv";
-    d3.csv(file).then(data => temp[i]["order"] = data);
-  }
 
-  return temp;
-}
+export function drawCanvas(divID, data) { 
+    const main = d3.select("#" + divID) 
+                    .append("svg") 
+                    .attr("width", width) 
+                    .attr("height", height * nFeatures) 
+                    .attr("id", "CFLinesSVG"); 
+    window.dataset = data; 
+    // console.log(document.getElementById(divID)); 
+}  
 
-const dataset = readData();
-
-function translation(currStep, nextStep, height) {
-  let svg = document.getElementById("main");
-  let svgs = svg.getElementsByClassName("lineChart");
-  let curr = dataset[currStep]["order"];
-  let next = dataset[nextStep]["order"];
+function translation(currStep, nextStep, height, dataset) {
+  let svg = document.getElementById("CFLinesSVG");
+  let svgs = svg.getElementsByClassName("lineChart"); 
+  let curr = window.dataset[currStep]["order"];
+  let next = window.dataset[nextStep]["order"];
   // console.log(svgs.length);
   for(let svg of svgs) {
     let feat = svg.id;
@@ -75,7 +69,7 @@ function translation(currStep, nextStep, height) {
 
 function changeStep(step) {
   d3.selectAll("g").attr("step", step);
-  const filePath = dataPath + "Step" + step + "/";
+  // const filePath = dataPath + "Step" + step + "/";
   for(let feat of features) {
     let data = dataset[step][feat];
     data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
@@ -86,21 +80,21 @@ function changeStep(step) {
   }
 }
 
-class LinePath {
+export class LinePath {
 
-  constructor(data, divID, feat, index) {
-    const self = this;
+  constructor(data, divID, feat, index, view) {
+    const self = this; 
 
     self.data = data;
     self.feat = feat;
     self.index = index;
-    self.divID = divID;
+    self.divID = divID; 
     let x = d3.map(self.data, d => d[""]);
     let y = d3.map(self.data, d => d["1"]);
 
     const dir = fdir[feat];
     // console.log(fdir);
-
+    self.view = view; 
     self.xScale = d3.scaleLinear()
             .domain([dir == 1 ? d3.min(x) : d3.max(x),
                       dir == 1 ? d3.max(x) : d3.min(x)])
@@ -276,17 +270,30 @@ class LinePath {
         const [xa, xb] = selection.map(self.xScale.invert);
         let va = Math.min(xa, xb);
         let vb = Math.max(xa, xb);
-        // console.log(d3.pointer(event));
-        const [x, y] = d3.pointer(event);
-        if(x && x > margin.left + 9.5 && x < width - margin.right) {
-          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x - 9.5]);
+        // console.log(d3.pointer(event)); 
+        const box = document.getElementById("CFLinesSVG").getBoundingClientRect(); 
+        let [x, y] = d3.pointer(event); 
+        x = x - box.x; y = y - box.y;
+        if(x && x > margin.left && x < width - margin.right) {
+          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x]);
         } else if(x >= width - margin.right) {
           d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, width - margin.right]);
         }
         self.circles.attr("stroke", d => {
           // console.log(xa, d[""], xb);
           return va <= d[""] && d[""] <= vb ? "blue" : "darkgray";
-        });
+        }); 
+        
+        let i = 0; 
+        while(self.mapped[i + 1] && self.mapped[i + 1][""] < selection[1]) {
+            i = i + 1; 
+        } 
+        console.log(self.mapped, i, selection); 
+        const interaction = self.mapped[i] ? self.xScale.invert(self.mapped[i][""]) : -9999; 
+        self.view.model.set("_feature_interacted", self.feat); 
+        self.view.touch(); 
+        self.view.model.set("_interaction", interaction); 
+        self.view.touch(); 
       }
     }
   }
@@ -320,23 +327,24 @@ class LinePath {
   }
 }
 
-function drawStep(step) {
+export function drawStep(step, divID, view) { 
   let folder = "Step" + step + "/";
-  let pathOrder = dataPath + folder + "order.csv";
+  // let pathOrder = dataPath + folder + "order.csv";
   for(let i = 0; i < nFeatures; i++) {
-    let file = dataPath + folder + features[i] + ".csv";
+    // let file = dataPath + folder + features[i] + ".csv";
     // console.log(file);
     let feat = features[i];
-    let order = {};
-    dataset[step]["order"].forEach(d => order[d["0"]] = +d[""]);
+    let order = {}; 
+    // console.log(dataset); 
+    window.dataset[step]["order"].forEach(d => order[d["0"]] = +d[""]);
 
-    let data = dataset[step][feat];
+    let data = window.dataset[step][feat];
     // console.log(data);
     // console.log(feat, order[feat], height * order[feat], features.length);
     // parse numbers
     data.forEach(d => {d["1"] = +d["1"]; d[""] = +d[""];});
     // console.log(data);
-    let lineChart = new LinePath(data, "main", feat, order[feat]);
+    let lineChart = new LinePath(data, divID, feat, order[feat], view);
     lineChart.draw();
     lineChart.axis();
     lineChart.path();
@@ -346,12 +354,4 @@ function drawStep(step) {
   }
 }
 
-setTimeout(() => {
-  const main = d3.select("#vis")
-          .append("svg")
-          .attr("width", width)
-          .attr("height", height * (nFeatures + 1))
-          .attr("id", "main");
 
-  drawStep(0);
-}, 1999);
