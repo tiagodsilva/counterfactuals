@@ -288,8 +288,8 @@ export class LinePath {
         while(self.mapped[i + 1] && self.mapped[i + 1][""] < selection[1]) {
             i = i + 1; 
         } 
-        console.log(self.mapped, i, selection); 
-        const interaction = self.mapped[i] ? self.xScale.invert(self.mapped[i][""]) : -9999; 
+
+        const interaction = self.mapped[i] && x ? self.xScale.invert(self.mapped[i][""]) : -9999; 
         self.view.model.set("_feature_interacted", self.feat); 
         self.view.touch(); 
         self.view.model.set("_interaction", interaction); 

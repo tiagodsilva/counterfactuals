@@ -278,8 +278,8 @@ class LinePath {
         let vb = Math.max(xa, xb);
         // console.log(d3.pointer(event));
         const [x, y] = d3.pointer(event);
-        if(x && x > margin.left && x < width - margin.right) {
-          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x]);
+        if(x && x > margin.left + 9.5 && x < width - margin.right) {
+          d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, x - 9.5]);
         } else if(x >= width - margin.right) {
           d3.select("#brushGroup" + self.feat).call(brush.move, [margin.left, width - margin.right]);
         }
