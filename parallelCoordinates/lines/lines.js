@@ -56,8 +56,7 @@ function translation(currStep, nextStep, height) {
   let svg = document.getElementById("main");
   let svgs = svg.getElementsByClassName("lineChart");
   let curr = dataset[currStep]["order"];
-  let next = dataset[nextStep]["order"];
-  // console.log(svgs.length);
+  let next = dataset[nextStep]["order"]; // console.log(svgs.length);
   for(let svg of svgs) {
     let feat = svg.id;
     // console.log(curr.filter(d => d["0"] == feat))
