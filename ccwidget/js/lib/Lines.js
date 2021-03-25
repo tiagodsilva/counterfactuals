@@ -26,19 +26,49 @@ var LinesView = widgets.DOMWidgetView.extend({
         let div = document.createElement("div"); 
         div.id = "CFLinesDIV"; 
         this.el.appendChild(div); 
-
-        const dataset = this.model.get("cfData"); 
+        const self = this; 
+        const dataset = this.model.get("_lines"); 
+        const order = this.model.get("_order"); 
+        const features = Object.keys(dataset); 
+        const divID = "CFLinesSVG"; 
+        self.lines = {}; 
+        self.initialize = true; 
         setTimeout(() => { 
             drawCanvas(div.id, dataset); 
-            drawStep(0, "CFLinesSVG", this); 
+            for(let i = 0; i < features.length; i++) { 
+                const feat = features[i];  
+                const data = dataset[feat]; 
+                let lineChart = new LinePath(data, divID, feat, order[feat], this); 
+                lineChart.draw(); 
+                lineChart.axis(); 
+                lineChart.path(); 
+                lineChart.circles(); 
+                lineChart.label(); 
+                lineChart.brush(); 
+                self.lines[feat] = lineChart; 
+            } 
         }, 229); 
         // Observe changes in the value traitlet in Python, and define
         // a custom callback.
-        this.model.on('change:value', this.value_changed, this);
+        this.model.on('change:_lines', this.value_changed, this, features);
     },
 
      value_changed: function() {
-        this.el.textContent = this.model.get('value');
+        // this.el.textContent = this.model.get('value'); 
+        const self = this; 
+        const dataset = this.model.get("_lines"); 
+        // console.log(dataset); 
+        const order = this.model.get("_order"); 
+        if(!self.intialize) { 
+            setTimeout(() => {  
+                for(let i = 0; i < features.length; i++) { 
+                    const feat = features[i]; 
+                    const data = dataset[feat]; 
+                    self.lines[feat].update(data, order[feat]); 
+                }  
+            }, 229) 
+        } 
+        self.initialize = false; 
     }
 });
 

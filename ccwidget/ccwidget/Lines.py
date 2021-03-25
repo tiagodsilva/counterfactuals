@@ -24,28 +24,36 @@ class Lines(widgets.DOMWidget):
     # Version of the front-end module containing widget model
     _model_module_version = Unicode('^0.1.0').tag(sync=True)
 
-    cfData = Dict(dict()).tag(sync = True) 
+    _lines = Dict(dict()).tag(sync = True) 
+    _order = Dict(dict()).tag(sync = True) 
     _feature_interacted = Unicode("None").tag(sync = True) 
     _interaction = Float(1).tag(sync = True) 
-    def __init__(self, cfa: dict, on_brush = None): 
+
+    # initialize = True # check if the widget is initializing now 
+    def __init__(self, lines: dict, order: dict, on_brush = None): 
         """ 
         The constructor method of the widget. 
     
         Parameters 
         -------------- 
-        cfa: dict of dicts 
+        lines: dict of pd.DataFrame  
             A dictionary containing the json data for each feature. 
 
+        order: dict 
+            A dictionary in which the keys are the features and the 
+            values are the order in which they will appear in the chart. 
+        
         on_brush: function 
             A function that dictates what will happen with the plot on brushing. 
         """      
         super().__init__() 
-        self.cfData = cfa 
+        self._lines = lines 
+        self._order = order 
         self._on_brush = on_brush 
         self._feature_interacted = "None" 
         self._interaction = 1 
         self._selection = {} 
-        for i in self.cfData[0].keys(): # initialize _selection 
+        for i in self._lines.keys(): # initialize _selection 
             self._selection[i] = None 
     
     @observe("_interaction") 
