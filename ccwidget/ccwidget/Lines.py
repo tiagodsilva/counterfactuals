@@ -26,11 +26,13 @@ class Lines(widgets.DOMWidget):
 
     _lines = Dict(dict()).tag(sync = True) 
     _order = Dict(dict()).tag(sync = True) 
+    _fdir = Dict(dict()).tag(sync = True) 
+    ROOT_PATH = Unicode(ROOT_PATH).tag(sync = True) 
     _feature_interacted = Unicode("None").tag(sync = True) 
     _interaction = Float(1).tag(sync = True) 
 
     # initialize = True # check if the widget is initializing now 
-    def __init__(self, lines: dict, order: dict, on_brush = None): 
+    def __init__(self, lines: dict, order: dict, feat_direction: dict, on_brush = None): 
         """ 
         The constructor method of the widget. 
     
@@ -42,6 +44,10 @@ class Lines(widgets.DOMWidget):
         order: dict 
             A dictionary in which the keys are the features and the 
             values are the order in which they will appear in the chart. 
+
+        feat_direction: dict 
+            A dictionary containing, for each feature, a value of 1 
+            if its values are increasing and -1 otherwise. 
         
         on_brush: function 
             A function that dictates what will happen with the plot on brushing. 
@@ -50,6 +56,7 @@ class Lines(widgets.DOMWidget):
         self._lines = lines 
         self._order = order 
         self._on_brush = on_brush 
+        self._fdir = feat_direction 
         self._feature_interacted = "None" 
         self._interaction = 1 
         self._selection = {} 
@@ -60,7 +67,8 @@ class Lines(widgets.DOMWidget):
     def _observe_selection(self, change): 
         if self._interaction >= 0 and self._feature_interacted is not None: 
             self._selection[self._feature_interacted] = self._interaction 
-        elif self._feature_interacted is not None: 
+        elif self._feature_interacted != "None": # this must be Unicode
+            print(self._feature_interacted)
             self._selection[self._feature_interacted] = None 
         if self._on_brush is not None: 
             self._on_brush(self._selection) 

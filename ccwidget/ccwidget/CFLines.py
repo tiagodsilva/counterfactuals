@@ -3,7 +3,7 @@ import pandas as pd
 from .Lines import Lines 
 class CFLines: 
 
-    def __init__(self, lines: dict, order: pd.DataFrame, on_brush = None): 
+    def __init__(self, lines: dict, order: pd.DataFrame, feat_direction: pd.DataFrame, on_brush = None): 
         """ 
         Constructor method for CFLines. 
 
@@ -23,9 +23,10 @@ class CFLines:
         
         self.lines = dict((feat, lines[feat].to_dict("records")) for feat in lines.keys())  
         self._on_brush = on_brush 
-        self.order = dict(zip(order["0"], order[""]))
-        self._widget = Lines(self.lines, self.order, self._on_brush) 
-        
+        self.order = dict(zip(order["0"], order[""])) 
+        self.fdir = dict(zip(feat_direction[""], feat_direction["0"])) 
+        self._widget = Lines(self.lines, self.order, self.fdir, self._on_brush) 
+
     def update_chart(self, lines, order): 
         self._widget._order = dict(zip(order["0"], order[""]))   
         self._widget._lines = dict(

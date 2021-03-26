@@ -5,66 +5,64 @@ export const features = ["BusStops", "ExpansionPhase", "Favelas", "FontainArea",
         "Schools", "SewageCollection", "TravelingTime", "Verticalization", "WaterSupply",
         "WomanHouseHolder", "YoungManRate", "Bars"];
 
-export const fdir = {
-  "Passengers": -1,
-  "TravelingTime": 1,
-  "HighRiskAreas": 1,
-  "FontainArea": 1,
-  "ExpansionPhase": 1,
-  "Population": -1,
-  "Favelas": 1,
-  "WaterSupply": 1,
-  "HighIncomeHolder": 1,
-  "LiterateHouseHolder": 1,
-  "WomanHouseHolder": 1,
-  "PopulationDensity": 1,
-  "ImprovisedHousing": -1,
-  "PermanentHousing": 1,
-  "SewageCollection": 1,
-  "GarbageCollection": 1,
-  "YoungManRate": 1,
-  "Verticalization": -1,
-  "Bars": -1,
-  "Schools": -1,
-  "BusStops": -1
-};
-
 const nFeatures = features.length;
 const nSteps = 3;
-const height = 59;
+const height = 39;
 const width = 259;
-const margin = {left: 35, bottom: 16, right: 15, top: 14};
-
+const margin = {left: 35, bottom: 9, right: 15, top: 4};
+const TransitionTime = 500; 
+const padding = 9.5; 
 
 export function drawCanvas(divID, data) { 
     const main = d3.select("#" + divID) 
                     .append("svg") 
-                    .attr("width", width) 
+                    .attr("width", width * 1.1) 
                     .attr("height", height * nFeatures) 
                     .attr("id", "CFLinesSVG"); 
     // window.dataset = data; 
     // console.log(document.getElementById(divID)); 
 }  
 
+function insertIcon(id, feat, dy) { 
+  const path =  `M3366 4468 c-48 -154 -57 -278 -31 -423 l14 -80 -372 -373 -372 -372
+    -71 30 c-236 99 -525 124 -779 69 -102 -22 -265 -76 -265 -87 0 -4 145 -152
+    322 -329 l322 -322 -30 -38 c-35 -44 -1512 -1951 -1528 -1973 -9 -12 -8 -13 4
+    -4 22 16 1929 1493 1973 1528 l38 30 322 -322 c177 -177 325 -322 329 -322 11
+    0 65 163 87 265 55 254 30 543 -69 779 l-30 71 372 372 373 372 80 -14 c95
+    -17 186 -19 275 -5 72 12 230 59 230 69 0 8 -1153 1161 -1161 1161 -4 0 -18
+    -37 -33 -82z m-1198 -1278 c45 -6 112 -20 149 -32 l68 -22 -66 -6 c-86 -8
+    -162 -46 -240 -117 l-60 -56 -103 102 -103 101 36 10 c39 10 156 27 206 29 17
+    0 67 -4 113 -9z` 
+    // console.log(document.getElementById(id), feat, id, dy); 
+    d3.select("#" + feat) 
+      .append("g") 
+      .attr("transform", "matrix(.005, 0, 0, .005, " + (width - margin.right) + ", 4)")  
+      .attr("id", "icon" + feat) 
+      .append("path") 
+      .attr("d", path);  
+  
+} 
+
 export class LinePath {
 
-  constructor(data, divID, feat, index, view) {
+  constructor(data, divID, feat, index, view, dir) {
     const self = this; 
 
     self.data = data;
     self.feat = feat;
-    self.index = index;
+    self.index = index; 
     self.divID = divID; 
+    self.dir = dir; // console.log(dir); 
     let x = d3.map(self.data, d => d[""]);
     let y = d3.map(self.data, d => d["1"]);
 
-    const dir = fdir[feat];
+    // const dir = fdir[feat];
     // console.log(fdir);
     self.view = view; 
     self.xScale = d3.scaleLinear()
-            .domain([dir == 1 ? d3.min(x) : d3.max(x),
-                      dir == 1 ? d3.max(x) : d3.min(x)])
-            .range([margin.left + 9.5, width - margin.right - 9.5]);
+            .domain([self.dir == 1 ? d3.min(x) : d3.max(x),
+                      self.dir == 1 ? d3.max(x) : d3.min(x)])
+            .range([margin.left + padding, width - margin.right - padding]);
 
     self.yScale = d3.scaleLinear()
             .domain([0, 1])
@@ -122,15 +120,15 @@ export class LinePath {
   self.yAxis = d3.axisLeft()
       .scale(self.yScale)
       .ticks(2)
-      .tickSizeOuter(1e-15)
-      .tickSizeInner(3); 
+      .tickSizeOuter(0)
+      .tickSizeInner(1.3); 
     let xAxisGroup = d3.select("#" + self.feat)
             .append("g")
             .attr("id", "xAxis" + self.feat + "group")
             .attr("transform", "translate(0," + (height - margin.bottom) + ")");
 
     xAxisGroup.call(self.xAxis)
-              .call(g => g.selectAll("text").attr("font-size", 14/2));
+              .call(g => g.selectAll("text").attr("font-size", 5));
 
     let yAxisGroup = d3.select("#" + self.feat)
             .append("g")
@@ -138,7 +136,7 @@ export class LinePath {
             .attr("transform", "translate(" + margin.left + ",0)");
 
     yAxisGroup.call(self.yAxis)
-            .call(g => g.selectAll("text").attr("font-size", 14/2));
+            .call(g => g.selectAll("text").attr("font-size", 5));
   }
 
   path() {
@@ -207,7 +205,7 @@ export class LinePath {
       .attr("id", "brushGroup" + self.feat)
       .on("contextmenu", function(event) {
         if(event.shiftKey) {
-          d3.select(this).call(brush.move, [margin.left, margin.left + 2]);
+          d3.select(this).call(brush.move, [margin.left, margin.left + .9]);
         }
       })
       .call(brush)
@@ -243,7 +241,7 @@ export class LinePath {
           return va <= d[""] && d[""] <= vb ? "blue" : "darkgray";
         }); 
         
-        let i = 0; 
+        let i = -1; 
         while(self.mapped[i + 1] && self.mapped[i + 1][""] < selection[1]) {
             i = i + 1; 
         } 
@@ -255,6 +253,15 @@ export class LinePath {
           self.view.touch(); 
           self.view.model.set("_interaction", interaction); 
           self.view.touch(); 
+          const matrix = document.getElementById(self.feat).transform.baseVal.consolidate(); 
+          const dy = matrix ? matrix.matrix : null; 
+          if(interaction > 0) { 
+            insertIcon("CFLinesSVG", self.feat, dy ? dy["f"] : 0); 
+          } else {
+            d3.select("#icon" + self.feat).remove(); 
+          } 
+        } else {
+          d3.select("#icon" + self.feat).remove(); 
         } 
       }
     }
@@ -271,18 +278,19 @@ export class LinePath {
     const dy = (next - curr) * height + (affine ? affine["f"] : 0); 
     d3.select("#" + self.feat) 
             .transition() 
-            .duration(459) 
+            .duration(TransitionTime) 
             .attr("transform", "translate(0, " + dy + ")"); 
     self.index = next; 
   } 
 
   scale(data) {
     const self = this; 
-
+    
     const x = d3.map(self.data, d => d[""]); 
     self.xScale = d3.scaleLinear() 
-            .domain([d3.min(x), d3.max(x)]) 
-            .range([margin.left, width - margin.right]); 
+            .domain([self.dir == 1 ? d3.min(x) : d3.max(x), 
+              self.dir == 1 ? d3.max(x) : d3.min(x)]) 
+            .range([margin.left + padding, width - margin.right - padding]); 
     } 
 
   update(data, order) { 
@@ -304,7 +312,7 @@ export class LinePath {
     // self.svg = d3.select("#path" + self.feat);
     d3.select("#path" + self.feat) 
             .transition()
-            .duration(459)
+            .duration(TransitionTime)
             .attr("d", path);
 
     d3.select("#" + self.feat)
@@ -312,7 +320,7 @@ export class LinePath {
             .data(data)
             .join("circle")
             .transition()
-            .duration(459)
+            .duration(TransitionTime)
             .attr("cx", d => self.xScale(d[""]))
             .attr("cy", d => self.yScale(d["1"]));
 

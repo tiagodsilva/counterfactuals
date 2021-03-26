@@ -29,6 +29,7 @@ var LinesView = widgets.DOMWidgetView.extend({
         const self = this; 
         const dataset = this.model.get("_lines"); 
         const order = this.model.get("_order"); 
+        const fdir = this.model.get("_fdir"); 
         const features = Object.keys(dataset); 
         const divID = "CFLinesSVG"; 
         self.lines = {}; 
@@ -38,7 +39,8 @@ var LinesView = widgets.DOMWidgetView.extend({
             for(let i = 0; i < features.length; i++) { 
                 const feat = features[i];  
                 const data = dataset[feat]; 
-                let lineChart = new LinePath(data, divID, feat, order[feat], this); 
+                // console.log(fdir, feat)
+                let lineChart = new LinePath(data, divID, feat, order[feat], this, fdir[feat]); 
                 lineChart.draw(); 
                 lineChart.axis(); 
                 lineChart.path(); 
